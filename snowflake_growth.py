@@ -14,8 +14,7 @@ DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":P}
 # c == proportion of ice
 # d == quantity of steam
 
-# NOTE : The dimension is in the form (rows, columns) but the coordinates will be in the form (number of column, number of rows)
-# This might be subject to change in the future
+# NOTE : The dimension is in the form (rows, columns) And so are the coordinates
 
 def create_plate(dim=DIMENSION, initial_position=-1):
     """
@@ -34,19 +33,19 @@ def create_plate(dim=DIMENSION, initial_position=-1):
     
     Exemples:
     
-    >>> DEFAULT_CELL["d"] = 1 # Used in order to don't have problems with doctest
+    >>> DEFAULT_CELL["d"] = 1 # Used in order to not have any problems with doctest
     >>> plate = create_plate(dim=(3,3))
     >>> for line in plate:
-    ...     print(line)
-    [{'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1}]
-    [{'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1}, {'is_in_crystal': True, 'b': 0, 'c': 1, 'd': 0}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1}]
-    [{'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1}]
-    
-    >>> plate = create_plate(dim=(2,3), initial_position=(1,0))
-    >>> for line in plate:
-    ...     print(line)
-    [{'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1}, {'is_in_crystal': True, 'b': 0, 'c': 1, 'd': 0}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1}]
-    [{'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1}]
+    ...     print("[", end="")
+    ...     for d in line:
+    ...         print("{", end="")
+    ...         for k in sorted(d.keys()):
+    ...             print(k, ":", d[k], ", ", end="")
+    ...         print("}, ", end="")
+    ...     print("]")
+    [{b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, ]
+    [{b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 1 , d : 0 , is_in_crystal : True , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, ]
+    [{b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, ]
     >>> DEFAULT_CELL["d"] = P # Reverts to original state
     
     """
@@ -56,13 +55,33 @@ def create_plate(dim=DIMENSION, initial_position=-1):
     plate[initial_position[1]][initial_position[0]] = {"is_in_crystal":True, "b":0, "c":1, "d":0}
     return plate
     
+
+def generate_neighbours(coordinates):
+    """
+    Returns the coordinates of potential neighbours of a given cell
     
+    :param coordinates: (tuple) the coordinates of the cell
+    :return: (list(tuples(int, int))) the list of the coordinates of the potential neighbours of a cell
+    
+    Examples:
+    
+    >>> generate_neighbours((0, 0))
+    [(0, -1), (-1, -1), (-1, 0), (0, 1), (1, 0), (1, -1)]
+    >>> generate_neighbours((4, 2))
+    [(4, 1), (3, 1), (3, 2), (4, 3), (5, 2), (5, 1)]
+    """
+    x = coordinates[1]
+    y = coordinates[0]
+    
+    if y % 2 == 0: # If the number of the line is even
+        return [(y, x-1), (y-1, x-1), (y-1, x), (y, x+1), (y+1, x), (y+1, x-1)]
+
+    else:
+        return [(y, x-1), (y-1, x), (y-1, x+1), (y, x+1), (y+1, x+1), (y+1, x)]
+
 def get_neighbours(coordinates, dim=DIMENSION):
     """
     Returns a list of the coordinates of the neighbours of the cell which `coordinates` are passed as parameter
-    WORKS!
-    Explanation can be made easily on paper.
-    All conditions for finding neighbours were found by empirical measures, and tested accordingly
     
     :param coordinates: (tuple)
     :param dim: (tuple) [DEFAULT: DIMENSION] couple of positives integers (row, column), the dimension of the plate
@@ -70,54 +89,26 @@ def get_neighbours(coordinates, dim=DIMENSION):
     
     Exemples:
     >>> get_neighbours((0,0), (5,5))
-    [(1, 0), (0, 1)]
+    [(0, 1), (1, 0)]
     >>> get_neighbours((4,0), (5,5))
-    [(3, 0), (4, 1), (3, 1)]
+    [(3, 0), (4, 1)]
     >>> get_neighbours((2,4), (5,5))
-    [(1, 4), (3, 4), (1, 3), (2, 3)]
+    [(2, 3), (1, 3), (1, 4), (3, 4), (3, 3)]
     >>> get_neighbours((2,2), (5,5))
-    [(1, 2), (3, 2), (1, 1), (2, 1), (2, 3), (1, 3)]
+    [(2, 1), (1, 1), (1, 2), (2, 3), (3, 2), (3, 1)]
     """
-    neighbours_coordinates = []
-
-    left_border = False
-    right_border = False
-    top_border = False
-    bottom_border = False
-    if coordinates[0] == 0:
-        left_border = True
-    if coordinates[0] == dim[1]-1:
-        right_border = True
-    if coordinates[1] == 0:
-        top_border = True
-    if coordinates[1] == dim[0] - 1:
-        bottom_border = True
+    list_neighbours = generate_neighbours(coordinates)
     
-    if not left_border:
-        neighbours_coordinates.append((coordinates[0]-1, coordinates[1])) # West cell
-    if not right_border:
-        neighbours_coordinates.append((coordinates[0]+1, coordinates[1])) # East cell 
-    if coordinates[1] % 2 == 1:
-        neighbours_coordinates.append((coordinates[0], coordinates[1]-1)) # North-West cell
-        if not right_border:
-            neighbours_coordinates.append((coordinates[0]+1, coordinates[1]-1)) # North-East cell 
-        if not bottom_border:
-            if not right_border:
-                neighbours_coordinates.append((coordinates[0]+1, coordinates[1]+1)) # South-East cell
-            neighbours_coordinates.append((coordinates[0], coordinates[1]+1)) # South-West cell
-    else:
-        if not top_border:
-            if not left_border: 
-                neighbours_coordinates.append((coordinates[0]-1, coordinates[1]-1)) # North-West cell
-            neighbours_coordinates.append((coordinates[0], coordinates[1]-1)) # North-East cell 
-        if not bottom_border:
-            neighbours_coordinates.append((coordinates[0], coordinates[1]+1)) # South-East cell
-            if not left_border:
-                neighbours_coordinates.append((coordinates[0]-1, coordinates[1]+1)) # South-West cell        
-    return neighbours_coordinates
+    # Test if the coordinates are correct, if they are not correct, it removes them from the list
+    for neighbour in list(list_neighbours): 
+        for i in range(2):
+            if neighbour[i] < 0 or neighbour[i] > dim[i]-1:
+                list_neighbours.pop(list_neighbours.index(neighbour))
+                break
+    return list_neighbours
+
 
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
     
-print(get_neighbours((2,2)))
