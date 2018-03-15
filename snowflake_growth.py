@@ -6,6 +6,7 @@
 
 Simulates the growth of a snowflake and displays it in real-time
 """
+from copy import copy
 
 P = 2 # Density of steam in each cell at the begining of the simulation
 DIMENSION = (5, 5) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
@@ -49,7 +50,7 @@ def create_plate(dim=DIMENSION, initial_position=-1):
     >>> DEFAULT_CELL["d"] = P # Reverts to original state
     
     """
-    plate = [[DEFAULT_CELL for i in range(dim[1])] for j in range(dim[0])]
+    plate = [[copy(DEFAULT_CELL) for i in range(dim[1])] for j in range(dim[0])]
     if initial_position == -1:
         initial_position = (dim[1]//2, dim[0]//2)
     plate[initial_position[1]][initial_position[0]] = {"is_in_crystal":True, "b":0, "c":1, "d":0}
