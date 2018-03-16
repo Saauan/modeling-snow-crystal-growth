@@ -55,7 +55,7 @@ def create_plate(dim=DIMENSION, initial_position=-1):
         initial_position = (dim[1]//2, dim[0]//2)
     plate[initial_position[1]][initial_position[0]] = {"is_in_crystal":True, "b":0, "c":1, "d":0}
     return plate
-
+    
 
 def generate_neighbours(coordinates):
     """
@@ -107,30 +107,6 @@ def get_neighbours(coordinates, dim=DIMENSION):
                 list_neighbours.pop(list_neighbours.index(neighbour))
                 break
     return list_neighbours
-
-
-def diffusion(coordinates, plate):
-    """
-    Computes diffusion for a cell in a `plate` put as parameter. It has a side effect, that is, it changes the value of key "d" of the cell.
-    Diffusion computes the steam for the cell by doing the average of its steam and the steam of its neighbours.
-    
-    :param coordinates: (tuple(int, int)) the coordinates of the cell
-    :param plate: (list(list(dict))) the support of the crystal
-    :return: None
-    """
-    cell = plate[coordinates[0]][coordinates[1]]
-    assert cell["is_in_crystal"] == False, "a cell was in a crystal" # One must check beforehand the cell is not in the crystal
-    neighbours = get_neighbours(coordinates)
-    list_steam = [cell["d"]]
-    for coord in neighbours:
-        dic = plate[coord[0]][coord[1]]
-        # If the neighbour is in the crystal, there's no need to add its steam to the mean, therefore, we add the cell's steam
-        if dic["is_in_crystal"] == True:
-            list_steam.append(cell["d"]) 
-        else:
-            list_steam.append(dic["d"]) # We add the steam of the neighbour to the list of the steams
-    cell["d"] = sum(list_steam) / (1+len(neighbours)) # We make the average of the steams, and the value of "d" inside the cell is changed
-    return None
 
 
 if __name__ == '__main__':
