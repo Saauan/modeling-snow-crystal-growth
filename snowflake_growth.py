@@ -8,9 +8,19 @@ Simulates the growth of a snowflake and displays it in real-time
 """
 from copy import copy, deepcopy
 
-P = 2 # Density of steam in each cell at the begining of the simulation
+# Coefficients of the attachment phase
+ALPHA = 0.5
+BETA  = 0.5
+THETA = 0.5
+# Coefficients of the melting phase
+GAMMA = 0.5
+MU = 0.5
+
+KAPPA = 0.5 # Proportion of steam which transforms into ice for a border cell
+RHO = 2 # Density of steam in each cell at the begining of the simulation
+
 DIMENSION = (5, 5) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
-DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":P}
+DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
 # b == proportion of quasi-liquid water
 # c == proportion of ice
 # d == quantity of steam
@@ -47,7 +57,7 @@ def create_plate(dim=DIMENSION, initial_position=-1):
     [{b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, ]
     [{b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 1 , d : 0 , is_in_crystal : True , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, ]
     [{b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, ]
-    >>> DEFAULT_CELL["d"] = P # Reverts to original state
+    >>> DEFAULT_CELL["d"] = RHO # Reverts to original state
     
     """
     plate = [[copy(DEFAULT_CELL) for j in range(dim[1])] for i in range(dim[0])]
@@ -57,7 +67,7 @@ def create_plate(dim=DIMENSION, initial_position=-1):
     return plate
 
 def generate_neighbours(coordinates):
-    """b′(x)c′(
+    """
     Returns the coordinates of potential neighbours of a given cell
     
     :param coordinates: (tuple) the coordinates of the cell
@@ -107,11 +117,6 @@ def get_neighbours(coordinates, dim=DIMENSION):
                 break
     return list_neighbours
 
-# Creates a list of neighbours
-LIST_NEIGHBOURS = [[] for i in range(DIMENSION[0])]
-for i in range(DIMENSION[0]):
-    for j in range(DIMENSION[1]):
-        LIST_NEIGHBOURS[i].append(get_neighbours((i,j)))
 
 def diffusion(coordinates, plate_in, plate_out):
     """
@@ -136,7 +141,7 @@ def diffusion(coordinates, plate_in, plate_out):
     plate_out[coordinates[0]][coordinates[1]]["d"] = sum(list_steam) / (1+len(neighbours)) # We make the average of the steams, and the value of "d" inside the cell is changed
     return plate_out
 
-def freezing(plate, k):
+def freezing(plate, k=RHO):
     """
     Under the influence of frost from the cristal, each point of the boundary of
     the cristal will get a fraction k of steam converterd into ice, and a
@@ -182,15 +187,15 @@ def attachment(plate, alpha=ALPHA, beta=BETA, theta=THETA):
                 neighbour = plate[coordinates[0]][coordinates[1]]
                 if neighbour[is_in_crystal]:
                     cristal_neighbours += 1
+            test_with_theta = 0
+            for coordinates in neighbours:
+                neighbour = plate[coordinates[0]][coordinates[1]]
+                test_with_theta += neighbour[d]            
             if (cristal_neighbours in (1, 2)) and (di[b] > beta):
                 di[c] = di[c] + di[b]
                 di[b] = 0
                 di[d] = 0
                 di[is_in_crystal] = True
-            test_with_theta = 0
-            for coordinates in neighbours:
-                neighbour = plate[coordinates[0]][coordinates[1]]
-                test_with_theta += neighbour[d]
             elif (cristal_neighbours == 3) and ((di[b] >= 1) or ((test_with_theta < theta) and (di[b] >= alpha))):
                 di[c] = di[c] + di[b]
                 di[b] = 0
@@ -204,6 +209,13 @@ def attachment(plate, alpha=ALPHA, beta=BETA, theta=THETA):
             numcolumn += 1
         numrow += 1
     return plate
+
+# Creates a list of the coordinates of the neighbours for each cell which can be used in later functions
+# To access the neighbours of the cell which coordinates are (5,1) you do LIST_NEIGHBOURS[5][1]
+LIST_NEIGHBOURS = [[] for i in range(DIMENSION[0])]
+for i in range(DIMENSION[0]):
+    for j in range(DIMENSION[1]):
+        LIST_NEIGHBOURS[i].append(get_neighbours((i,j)))
 
 if __name__ == '__main__':
     import doctest
