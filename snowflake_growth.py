@@ -136,6 +136,74 @@ def diffusion(coordinates, plate_in, plate_out):
     plate_out[coordinates[0]][coordinates[1]]["d"] = sum(list_steam) / (1+len(neighbours)) # We make the average of the steams, and the value of "d" inside the cell is changed
     return plate_out
 
+def freezing(plate, k):
+    """
+    Under the influence of frost from the cristal, each point of the boundary of
+    the cristal will get a fraction k of steam converterd into ice, and a
+    fraction 1 - k converted into liquid.
+    :param plate: (list of list of dict) The plate which contain the cristal.
+    :param k: (float) The fraction used fo the evolution of the snowflake.
+    :return: (list of list of dict) The modified plate.
+    
+    UC: A valid plate, 0 <= k <= 1
+    """ 
+    for li in plate:
+        for di in li:
+            if (di[b] * di[c]) != 0:
+                di[b] = di[b] + (1 - k) * di[d]
+                di[c] = di[c] + k * di[d]
+                di[d] = 0
+    return plate
+
+
+def attachment(plate, alpha=ALPHA, beta=BETA, theta=THETA):
+    """
+    Determine if a cell will attach itself to the cristal.
+    :param plate: (list of list of dict) The plate which contain the cristal.
+    :param alpha: (float) [DEFAULT: ALPHA] Coefficient that determine the minimum amount of ice in a cell for it
+        to attach itself to the cristal if it only has 3 cristal cells in the neighbourhood. Works with theta.
+    :param beta: (float) [DEFAULT: BETA] Coefficient that determine the minimum amount of ice in a cell for it
+        to attach itself to the cristal if it only has 1 or 2 cristal cells in the neighbourhood.
+    :param theta: (float) [DEFAULT: THETA] Coefficient that determine the maximum amount of vapor surrounding
+        the cell for it to still turn into a part of the cristal. With alpha, if both condition are True then
+        the cell will be part of the cristal if it is surrrounded by 3 cristal cells.
+    :return: (Nun) A holy praying person.
+    
+    UC: A valid plate.
+    """
+    numrow = 0
+    
+    for li in plate:
+        numcolumn = 0
+        for di in li:
+            neighbours = LIST_NEIGHBOURS[numrow][numcolumn]
+            cristal_neighbours = 0
+            for coordinates in neighbours:
+                neighbour = plate[coordinates[0]][coordinates[1]]
+                if neighbour[is_in_crystal]:
+                    cristal_neighbours += 1
+            if (cristal_neighbours in (1, 2)) and (di[b] > beta):
+                di[c] = di[c] + di[b]
+                di[b] = 0
+                di[d] = 0
+                di[is_in_crystal] = True
+            test_with_theta = 0
+            for coordinates in neighbours:
+                neighbour = plate[coordinates[0]][coordinates[1]]
+                test_with_theta += neighbour[d]
+            elif (cristal_neighbours == 3) and ((di[b] >= 1) or ((test_with_theta < theta) and (di[b] >= alpha))):
+                di[c] = di[c] + di[b]
+                di[b] = 0
+                di[d] = 0
+                di[is_in_crystal] = True
+            elif cristal_neighbours > 3:
+                di[c] = di[c] + di[b]
+                di[b] = 0
+                di[d] = 0
+                di[is_in_crystal] = True
+            numcolumn += 1
+        numrow += 1
+    return plate
 
 if __name__ == '__main__':
     import doctest
