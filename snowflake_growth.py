@@ -6,7 +6,7 @@
 
 Simulates the growth of a snowflake and displays it in real-time
 """
-from copy import copy
+from copy import copy, deepcopy
 
 P = 2 # Density of steam in each cell at the begining of the simulation
 DIMENSION = (5, 5) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
@@ -109,7 +109,7 @@ def get_neighbours(coordinates, dim=DIMENSION):
     return list_neighbours
 
 
-def diffusion(coordinates, plate):
+def diffusion(coordinates, plate_in, plate_out):
     """
     Computes diffusion for a cell in a `plate` put as parameter. It has a side effect, that is, it changes the value of key "d" of the cell.
     Diffusion computes the steam for the cell by doing the average of its steam and the steam of its neighbours.
@@ -118,18 +118,18 @@ def diffusion(coordinates, plate):
     :param plate: (list(list(dict))) the support of the crystal
     :return: None
     """
-    cell = plate[coordinates[0]][coordinates[1]]
+    cell = plate_in[coordinates[0]][coordinates[1]]
     assert cell["is_in_crystal"] == False, "a cell was in a crystal" # One must check beforehand the cell is not in the crystal
     neighbours = get_neighbours(coordinates)
     list_steam = [cell["d"]]
     for coord in neighbours:
-        dic = plate[coord[0]][coord[1]]
+        dic = plate_in[coord[0]][coord[1]]
         # If the neighbour is in the crystal, there's no need to add its steam to the mean, therefore, we add the cell's steam
         if dic["is_in_crystal"] == True:
             list_steam.append(cell["d"]) 
         else:
             list_steam.append(dic["d"]) # We add the steam of the neighbour to the list of the steams
-    cell["d"] = sum(list_steam) / (1+len(neighbours)) # We make the average of the steams, and the value of "d" inside the cell is changed
+    plate_out[coordinates[0]][coordinates[1]]["d"] = sum(list_steam) / (1+len(neighbours)) # We make the average of the steams, and the value of "d" inside the cell is changed
     return None
 
 
