@@ -50,15 +50,14 @@ def create_plate(dim=DIMENSION, initial_position=-1):
     >>> DEFAULT_CELL["d"] = P # Reverts to original state
     
     """
-    plate = [[copy(DEFAULT_CELL) for i in range(dim[1])] for j in range(dim[0])]
+    plate = [[copy(DEFAULT_CELL) for j in range(dim[1])] for i in range(dim[0])]
     if initial_position == -1:
-        initial_position = (dim[1]//2, dim[0]//2)
-    plate[initial_position[1]][initial_position[0]] = {"is_in_crystal":True, "b":0, "c":1, "d":0}
+        initial_position = (dim[0]//2, dim[1]//2)
+    plate[initial_position[0]][initial_position[1]] = {"is_in_crystal":True, "b":0, "c":1, "d":0}
     return plate
 
-
 def generate_neighbours(coordinates):
-    """
+    """b′(x)c′(
     Returns the coordinates of potential neighbours of a given cell
     
     :param coordinates: (tuple) the coordinates of the cell
@@ -108,6 +107,11 @@ def get_neighbours(coordinates, dim=DIMENSION):
                 break
     return list_neighbours
 
+# Creates a list of neighbours
+LIST_NEIGHBOURS = [[] for i in range(DIMENSION[0])]
+for i in range(DIMENSION[0]):
+    for j in range(DIMENSION[1]):
+        LIST_NEIGHBOURS[i].append(get_neighbours((i,j)))
 
 def diffusion(coordinates, plate_in, plate_out):
     """
@@ -120,7 +124,7 @@ def diffusion(coordinates, plate_in, plate_out):
     """
     cell = plate_in[coordinates[0]][coordinates[1]]
     assert cell["is_in_crystal"] == False, "a cell was in a crystal" # One must check beforehand the cell is not in the crystal
-    neighbours = get_neighbours(coordinates)
+    neighbours = LIST_NEIGHBOURS
     list_steam = [cell["d"]]
     for coord in neighbours:
         dic = plate_in[coord[0]][coord[1]]
