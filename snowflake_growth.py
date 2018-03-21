@@ -210,13 +210,15 @@ def attachment(plate, alpha=ALPHA, beta=BETA, theta=THETA):
         numrow += 1
     return plate
 
-# Creates a list of the coordinates of the neighbours for each cell which can be used in later functions
-# To access the neighbours of the cell which coordinates are (5,1) you do LIST_NEIGHBOURS[5][1]
-LIST_NEIGHBOURS = [[] for i in range(DIMENSION[0])]
+    
+
+# Create a dictionnary which maps a list of neighbours coordinates to the coordinates of a cell
+# To access the neughbours of a cell which coordinates are (a, b) you do NEIGHBOURS[(a, b)]
+NEIGHBOURS = {}
 for i in range(DIMENSION[0]):
     for j in range(DIMENSION[1]):
-        LIST_NEIGHBOURS[i].append(get_neighbours((i,j)))
-
+        NEIGHBOURS[(i,j)] = get_neighbours((i,j))
+        
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
