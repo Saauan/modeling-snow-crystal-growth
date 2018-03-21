@@ -134,7 +134,7 @@ def diffusion(coordinates, plate_in, plate_out):
         else:
             list_steam.append(dic["d"]) # We add the steam of the neighbour to the list of the steams
     plate_out[coordinates[0]][coordinates[1]]["d"] = sum(list_steam) / (1+len(neighbours)) # We make the average of the steams, and the value of "d" inside the cell is changed
-    return None
+    return plate_out
 
 
 if __name__ == '__main__':
