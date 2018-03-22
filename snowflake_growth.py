@@ -8,18 +8,20 @@ Simulates the growth of a snowflake and displays it in real-time
 """
 from copy import copy, deepcopy
 
+NUMBER = 500
+
 # Coefficients of the attachment phase
-ALPHA = 0.5
-BETA  = 0.5
-THETA = 0.5
+ALPHA = 0.7
+BETA  = 0.6
+THETA = 0.7
 # Coefficients of the melting phase
-GAMMA = 0.5
-MU = 0.5
+GAMMA = 0.5 # Proportion of ice that transforms into steam
+MU = 0.5 # Proportion of water that transforms into steam
 
-KAPPA = 0.5 # Proportion of steam which transforms into ice for a border cell
-RHO = 2 # Density of steam in each cell at the begining of the simulation
+KAPPA = 0.6 # Proportion of steam which transforms into ice for a border cell
+RHO = 1.1 # Density of steam in each cell at the begining of the simulation
 
-DIMENSION = (5, 5) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
+DIMENSION = (80, 115) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
 DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
 # b == proportion of quasi-liquid water
 # c == proportion of ice
@@ -118,7 +120,7 @@ def get_neighbours(coordinates, dim=DIMENSION):
     return list_neighbours
 
 
-def diffusion(coordinates, plate_in, plate_out):
+def diffusion(plate_in):
     """
     Computes diffusion for a cell in a `plate` put as parameter. It has a side effect, that is, it changes the value of key "d" of the cell.
     Diffusion computes the steam for the cell by doing the average of its steam and the steam of its neighbours.
@@ -127,21 +129,25 @@ def diffusion(coordinates, plate_in, plate_out):
     :param plate: (list(list(dict))) the support of the crystal
     :return: None
     """
-    cell = plate_in[coordinates[0]][coordinates[1]]
-    assert cell["is_in_crystal"] == False, "a cell was in a crystal" # One must check beforehand the cell is not in the crystal
-    neighbours = LIST_NEIGHBOURS
-    list_steam = [cell["d"]]
-    for coord in neighbours:
-        dic = plate_in[coord[0]][coord[1]]
-        # If the neighbour is in the crystal, there's no need to add its steam to the mean, therefore, we add the cell's steam
-        if dic["is_in_crystal"] == True:
-            list_steam.append(cell["d"]) 
-        else:
-            list_steam.append(dic["d"]) # We add the steam of the neighbour to the list of the steams
-    plate_out[coordinates[0]][coordinates[1]]["d"] = sum(list_steam) / (1+len(neighbours)) # We make the average of the steams, and the value of "d" inside the cell is changed
+    plate_out = deepcopy(plate_in)
+    for (y,x) in NEIGHBOURS:
+        cell = plate_in[y][x]
+        if cell["is_in_crystal"] == False:
+            assert cell["is_in_crystal"] == False, "a cell was in a crystal" # One must check beforehand the cell is not in the crystal
+            neighbours = NEIGHBOURS[(y, x)]
+            list_steam = [cell["d"]]
+            for (y2,x2) in neighbours:
+                dic = plate_in[y2][x2]
+                # If the neighbour is in the crystal, there's no need to add its steam to the mean, therefore, we add the cell's steam
+                if dic["is_in_crystal"] == True:
+                    list_steam.append(cell["d"]) 
+                else:
+                    list_steam.append(dic["d"]) # We add the steam of the neighbour to the list of the steams
+            plate_out[y][x]["d"] = sum(list_steam) / (1+len(neighbours)) # We make the average of the steams, and the value of "d" inside the cell is changed
+        
     return plate_out
 
-def freezing(plate, k=RHO):
+def freezing(plate, cells_at_border, k=KAPPA):
     """
     Under the influence of frost from the cristal, each point of the boundary of
     the cristal will get a fraction k of steam converterd into ice, and a
@@ -152,16 +158,15 @@ def freezing(plate, k=RHO):
     
     UC: A valid plate, 0 <= k <= 1
     """ 
-    for li in plate:
-        for di in li:
-            if (di[b] * di[c]) != 0:
-                di[b] = di[b] + (1 - k) * di[d]
-                di[c] = di[c] + k * di[d]
-                di[d] = 0
+    for (y, x) in cells_at_border:
+        di = plate[y][x] 
+        di["b"] = di["b"] + (1 - k) * di["d"]
+        di["c"] = di["c"] + k * di["d"]
+        di["d"] = 0
     return plate
 
 
-def attachment(plate, alpha=ALPHA, beta=BETA, theta=THETA):
+def attachment(plate_in, cells_at_border, alpha=ALPHA, beta=BETA, theta=THETA):
     """
     Determine if a cell will attach itself to the cristal.
     :param plate: (list of list of dict) The plate which contain the cristal.
@@ -176,41 +181,88 @@ def attachment(plate, alpha=ALPHA, beta=BETA, theta=THETA):
     
     UC: A valid plate.
     """
-    numrow = 0
-    
-    for li in plate:
-        numcolumn = 0
-        for di in li:
-            neighbours = LIST_NEIGHBOURS[numrow][numcolumn]
-            cristal_neighbours = 0
-            for coordinates in neighbours:
-                neighbour = plate[coordinates[0]][coordinates[1]]
-                if neighbour[is_in_crystal]:
-                    cristal_neighbours += 1
-            test_with_theta = 0
-            for coordinates in neighbours:
-                neighbour = plate[coordinates[0]][coordinates[1]]
-                test_with_theta += neighbour[d]            
-            if (cristal_neighbours in (1, 2)) and (di[b] > beta):
-                di[c] = di[c] + di[b]
-                di[b] = 0
-                di[d] = 0
-                di[is_in_crystal] = True
-            elif (cristal_neighbours == 3) and ((di[b] >= 1) or ((test_with_theta < theta) and (di[b] >= alpha))):
-                di[c] = di[c] + di[b]
-                di[b] = 0
-                di[d] = 0
-                di[is_in_crystal] = True
-            elif cristal_neighbours > 3:
-                di[c] = di[c] + di[b]
-                di[b] = 0
-                di[d] = 0
-                di[is_in_crystal] = True
-            numcolumn += 1
-        numrow += 1
-    return plate
+    plate_out = deepcopy(plate_in)
+    new_cells_at_border = []
+    for i, (y,x) in enumerate(cells_at_border):
+        di = plate_in[y][x]
+        di_out = plate_out[y][x]
+        neighbours = NEIGHBOURS[(y, x)]
+        cristal_neighbours = 0
+        test_with_theta = 0
+        for (y2, x2) in neighbours:
+            neighbour = plate_in[y2][x2]
+            if neighbour["is_in_crystal"] == True:
+                cristal_neighbours += 1     
+                test_with_theta += neighbour["d"]  
+#         if (y,x) == (3,2):
+#             print("oui")
+        if (((cristal_neighbours in (1, 2)) and (di["b"] > beta))
+            or ((cristal_neighbours == 3) and ((di["b"] >= 1) or ((test_with_theta < theta) and (di["b"] >= alpha))))
+            or cristal_neighbours > 3):
+            di_out["c"] = di["c"] + di["b"]
+            di_out["b"] = 0
+            di_out["d"] = 0
+            di_out["is_in_crystal"] = True
+            for y3, x3 in NEIGHBOURS[(y,x)]:
+                if plate_in[y3][x3]["is_in_crystal"] == False:
+                    new_cells_at_border.append((y3, x3))
+        else:
+            new_cells_at_border.append((y, x))
+            
+    return plate_out
 
-    
+def melting(plate, cells_at_border, mu=MU, gamma=GAMMA):
+    """
+    """
+    for (y, x) in cells_at_border:
+        di = plate[y][x]
+        di["d"] = di["d"] + mu * di["b"] + gamma * di["c"]
+        di["b"] = (1-mu) * di["b"]
+        di["c"] = (1-gamma) * di["c"]
+    return None
+
+def update_border(plate, dim=DIMENSION):
+    """
+    """
+    res = []
+    for y in range(dim[0]):
+        for x in range(dim[1]):
+            for (y1, x1) in NEIGHBOURS[(y,x)]:
+                if plate[y1][x1]["is_in_crystal"] == True:
+                    res.append((y,x))
+    return res
+        
+                
+def model_snowflake(dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=THETA, gamma=GAMMA, mu=MU, kappa=KAPPA):
+    """
+    Displays a snowflake.
+    This is the main function of the program, it will actualise the snowflake as well as displaying it and will eventually save its state
+    """
+    plate = create_plate()
+    if init_pos == -1:
+        init_pos = (dim[0]//2, dim[1]//2)
+    cells_at_border = list(NEIGHBOURS[(init_pos[0], init_pos[1])]) # List of tuples of coordinates
+    plate[0][0]["d"] = 0.2
+    for i in range(NUMBER):
+        plate = diffusion(plate)
+        plate = freezing(plate, cells_at_border)
+        plate = attachment(plate, cells_at_border) # Runs the attachement phase and updates cells_at_border
+        cells_at_border = update_border(plate)
+        melting(plate, cells_at_border)        
+        
+        if i % 3 == 0:
+            for line in plate:
+                for d in line:
+                    (b0, c0, d0, crystal) = sorted(d.keys())
+                    if d[crystal] == False:
+                        print(".", end=" ")
+                    else:
+                        print("X", end=" ")
+                print()
+            print()
+        # Displaying the plate with the PILLOW library
+        
+        # Maybe saving its state for further research
 
 # Create a dictionnary which maps a list of neighbours coordinates to the coordinates of a cell
 # To access the neughbours of a cell which coordinates are (a, b) you do NEIGHBOURS[(a, b)]
@@ -219,6 +271,8 @@ for i in range(DIMENSION[0]):
     for j in range(DIMENSION[1]):
         NEIGHBOURS[(i,j)] = get_neighbours((i,j))
         
+model_snowflake()
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
