@@ -6,6 +6,9 @@
 
 Simulates the growth of a snowflake and displays it in real-time
 """
+
+from __future__ import print_function
+from PIL import Image
 from copy import copy, deepcopy
 
 NUMBER = 500
@@ -237,6 +240,7 @@ def model_snowflake(dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=TH
     Displays a snowflake.
     This is the main function of the program, it will actualise the snowflake as well as displaying it and will eventually save its state
     """
+    snowflake_pixels = []
     plate = create_plate()
     if init_pos == -1:
         init_pos = (dim[0]//2, dim[1]//2)
@@ -254,14 +258,17 @@ def model_snowflake(dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=TH
                 for d in line:
                     (b0, c0, d0, crystal) = sorted(d.keys())
                     if d[crystal] == False:
-                        print(".", end=" ")
+                        pixels_snowflake += [(0,0,0)]
                     else:
-                        print("X", end=" ")
-                print()
-            print()
+                        pixels_snowflake += [(0,255,255)]
         # Displaying the plate with the PILLOW library
-        
+        snowflake = Image.new("RGB", DIM, color=0)
+        snowflake.putdata(snowflake_pixels)
         # Maybe saving its state for further research
+        snowflake.save("snowflake"+str(i), format="JPEG")
+        # WARNING! This will create *NUMBER* JPEGs, so do it in a folder!
+    return
+
 
 # Create a dictionnary which maps a list of neighbours coordinates to the coordinates of a cell
 # To access the neughbours of a cell which coordinates are (a, b) you do NEIGHBOURS[(a, b)]
