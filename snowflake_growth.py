@@ -21,7 +21,7 @@ MU = 0.5 # Proportion of water that transforms into steam
 KAPPA = 0.6 # Proportion of steam which transforms into ice for a border cell
 RHO = 1.1 # Density of steam in each cell at the begining of the simulation
 
-DIMENSION = (80, 115) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
+DIMENSION = (300, 315) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
 DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
 # b == proportion of quasi-liquid water
 # c == proportion of ice
@@ -146,7 +146,7 @@ def diffusion(plate_in):
         
     return plate_out
 
-def freezing(plate, cells_at_border, k=KAPPA):
+def freezing(di, k=KAPPA):
     """
     Under the influence of frost from the cristal, each point of the boundary of
     the cristal will get a fraction k of steam converterd into ice, and a
@@ -157,15 +157,13 @@ def freezing(plate, cells_at_border, k=KAPPA):
     
     UC: A valid plate, 0 <= k <= 1
     """ 
-    for (y, x) in cells_at_border:
-        di = plate[y][x] 
-        di["b"] = di["b"] + (1 - k) * di["d"]
-        di["c"] = di["c"] + k * di["d"]
-        di["d"] = 0
-    return plate
+    di["b"] = di["b"] + (1 - k) * di["d"]
+    di["c"] = di["c"] + k * di["d"]
+    di["d"] = 0
+    return di
 
 
-def attachment(plate_in, cells_at_border, alpha=ALPHA, beta=BETA, theta=THETA):
+def attachment(di, cell_at_border, neighbours, alpha=ALPHA, beta=BETA, theta=THETA):
     """
     Determine if a cell will attach itself to the cristal.
     :param plate: (list of list of dict) The plate which contain the cristal.
@@ -180,45 +178,36 @@ def attachment(plate_in, cells_at_border, alpha=ALPHA, beta=BETA, theta=THETA):
     
     UC: A valid plate.
     """
-    plate_out = deepcopy(plate_in)
-    new_cells_at_border = []
-    for i, (y,x) in enumerate(cells_at_border):
-        di = plate_in[y][x]
-        di_out = plate_out[y][x]
-        neighbours = NEIGHBOURS[(y, x)]
-        cristal_neighbours = 0
-        test_with_theta = 0
-        for (y2, x2) in neighbours:
-            neighbour = plate_in[y2][x2]
-            if neighbour["is_in_crystal"] == True:
-                cristal_neighbours += 1     
-                test_with_theta += neighbour["d"]  
-#         if (y,x) == (3,2):
-#             print("oui")
-        if (((cristal_neighbours in (1, 2)) and (di["b"] > beta))
-            or ((cristal_neighbours == 3) and ((di["b"] >= 1) or ((test_with_theta < theta) and (di["b"] >= alpha))))
-            or cristal_neighbours > 3):
-            di_out["c"] = di["c"] + di["b"]
-            di_out["b"] = 0
-            di_out["d"] = 0
-            di_out["is_in_crystal"] = True
-            for y3, x3 in NEIGHBOURS[(y,x)]:
-                if plate_in[y3][x3]["is_in_crystal"] == False:
-                    new_cells_at_border.append((y3, x3))
-        else:
-            new_cells_at_border.append((y, x))
-            
-    return plate_out
+    x = cell_at_border[1]
+    y = cell_at_border[0]
 
-def melting(plate, cells_at_border, mu=MU, gamma=GAMMA):
+    di_out = deepcopy(di)
+    neighbours
+    cristal_neighbours = 0
+    test_with_theta = 0
+    for neighbour in neighbours:
+        if neighbour["is_in_crystal"] == True:
+            cristal_neighbours += 1     
+            test_with_theta += neighbour["d"]
+            
+    if (((cristal_neighbours in (1, 2)) and (di["b"] > beta))
+        or ((cristal_neighbours == 3) and ((di["b"] >= 1) or ((test_with_theta < theta) and (di["b"] >= alpha))))
+        or cristal_neighbours > 3):
+        di_out["c"] = di["c"] + di["b"]
+        di_out["b"] = 0
+        di_out["d"] = 0
+        di_out["is_in_crystal"] = True
+            
+    return di_out
+
+def melting(di, mu=MU, gamma=GAMMA):
     """
     """
-    for (y, x) in cells_at_border:
-        di = plate[y][x]
-        di["d"] = di["d"] + mu * di["b"] + gamma * di["c"]
-        di["b"] = (1-mu) * di["b"]
-        di["c"] = (1-gamma) * di["c"]
-    return None
+    di["d"] = di["d"] + mu * di["b"] + gamma * di["c"]
+    di["b"] = (1-mu) * di["b"]
+    di["c"] = (1-gamma) * di["c"]
+    return di
+
 
 def update_border(plate, dim=DIMENSION):
     """
@@ -240,15 +229,25 @@ def model_snowflake(dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=TH
     plate = create_plate()
     if init_pos == -1:
         init_pos = (dim[0]//2, dim[1]//2)
-    cells_at_border = list(NEIGHBOURS[(init_pos[0], init_pos[1])]) # List of tuples of coordinates
-    plate[0][0]["d"] = 0.2
+    cells_at_border = set(NEIGHBOURS[(init_pos[0], init_pos[1])]) # set of tuples of coordinates
+    print(cells_at_border)  # DEBUG
     for i in range(NUMBER):
-        plate = diffusion(plate)
-        plate = freezing(plate, cells_at_border)
-        plate = attachment(plate, cells_at_border) # Runs the attachement phase and updates cells_at_border
-        cells_at_border = update_border(plate)
-        melting(plate, cells_at_border)        
+        plate = diffusion(plate) # DIFFUSION
         
+        plate_out = deepcopy(plate)
+        for cell in cells_at_border: # cell is a tuple of coordinates
+            cell_di = plate[cell[0]][cell[1]]
+            cell_di = freezing(cell_di) # FREEZING
+            neighbours = [] # A list of all neighbours (the dictionnaries)
+            for y, x in NEIGHBOURS[(cell[0], cell[1])]:
+                neighbours.append(plate[y][x])
+            plate_out[cell[0]][cell[1]] = attachment(cell_di, cell, neighbours) # ATTACHMENT
+            cell_di = melting(cell_di) # MELTING
+            
+        plate = plate_out
+        cells_at_border = update_border(plate)
+        
+        # Display in shell
         if i % 3 == 0:
             for line in plate:
                 for d in line:
