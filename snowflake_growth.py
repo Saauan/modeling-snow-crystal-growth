@@ -119,7 +119,6 @@ def get_neighbours(coordinates, dim=DIMENSION):
                 break
     return list_neighbours
 
-
 def diffusion(plate_in):
     """
     Computes diffusion for a cell in a `plate` put as parameter. It has a side effect, that is, it changes the value of key "d" of the cell.
