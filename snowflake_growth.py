@@ -11,7 +11,7 @@ from __future__ import print_function
 from PIL import Image
 from copy import copy, deepcopy
 
-NUMBER = 500
+NUMBER = 100
 
 # Coefficients of the attachment phase
 ALPHA = 0.7
@@ -24,7 +24,7 @@ MU = 0.5 # Proportion of water that transforms into steam
 KAPPA = 0.6 # Proportion of steam which transforms into ice for a border cell
 RHO = 1.1 # Density of steam in each cell at the begining of the simulation
 
-DIMENSION = (80, 115) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
+DIMENSION = (200, 200) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
 DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
 # b == proportion of quasi-liquid water
 # c == proportion of ice
@@ -240,7 +240,6 @@ def model_snowflake(dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=TH
     Displays a snowflake.
     This is the main function of the program, it will actualise the snowflake as well as displaying it and will eventually save its state
     """
-    snowflake_pixels = []
     plate = create_plate()
     if init_pos == -1:
         init_pos = (dim[0]//2, dim[1]//2)
@@ -252,20 +251,29 @@ def model_snowflake(dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=TH
         plate = attachment(plate, cells_at_border) # Runs the attachement phase and updates cells_at_border
         cells_at_border = update_border(plate)
         melting(plate, cells_at_border)        
-        
-        if i % 3 == 0:
-            for line in plate:
-                for d in line:
-                    (b0, c0, d0, crystal) = sorted(d.keys())
-                    if d[crystal] == False:
-                        pixels_snowflake += [(0,0,0)]
-                    else:
-                        pixels_snowflake += [(0,255,255)]
-        # Displaying the plate with the PILLOW library
-        snowflake = Image.new("RGB", DIM, color=0)
-        snowflake.putdata(snowflake_pixels)
-        # Maybe saving its state for further research
-        snowflake.save("snowflake"+str(i), format="JPEG")
+        if i % 10 == 0:
+            savestates(plate, "snowflake", i)
+    savestates(plate, "snowflake", i)
+    return
+            
+def savestates(plate, filename, n=0):
+    """
+    Create a JPEG of the snowflake.
+    :param plate: (list of list of dict) The plate which contain the cristal.
+    :param filename: (str) Name of the file.
+    :param n: (int) The n-th iteration of the snowflake.
+        0 by default, if the param doesn't change you will only get the last image.
+    """
+    pixels_snowflake = []
+    for line in plate:
+        for d in line:
+            if d["is_in_crystal"] == False:
+                pixels_snowflake += [(0,0,0)]
+            else:
+                pixels_snowflake += [(0,255,255)]
+        snowflake = Image.new("RGB", DIMENSION, color=0)
+        snowflake.putdata(pixels_snowflake)
+        snowflake.save(filename + str(n), format="JPEG")
         # WARNING! This will create *NUMBER* JPEGs, so do it in a folder!
     return
 
