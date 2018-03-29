@@ -8,7 +8,7 @@ Simulates the growth of a snowflake and displays it in real-time
 from copy import copy, deepcopy
 import random
 
-NUMBER = 500
+NUMBER = 200
 
 # Coefficients of the attachment phase
 ALPHA = 0.7
@@ -166,7 +166,7 @@ def freezing(di, k=KAPPA):
     return di
 
 
-def attachment(di, cell_at_border, neighbours, new_cells_at_border, ind, alpha=ALPHA, beta=BETA, theta=THETA):
+def attachment(di, cell_at_border, neighbours, ind, alpha=ALPHA, beta=BETA, theta=THETA):
     """
     Returns the cell passed as a parameter updated (or not) by the freezing phase
     
@@ -187,7 +187,6 @@ def attachment(di, cell_at_border, neighbours, new_cells_at_border, ind, alpha=A
     x = cell_at_border[1]
     y = cell_at_border[0]
 
-    neighbours
     cristal_neighbours = 0
     test_with_theta = 0
     for neigh_coord, neigh_di in neighbours.items():
@@ -208,8 +207,6 @@ def attachment(di, cell_at_border, neighbours, new_cells_at_border, ind, alpha=A
     else:
         return None
             
-    
-
 def melting(di, mu=MU, gamma=GAMMA):
     """
     Does the melting phase for one cell and returns it.
@@ -239,7 +236,44 @@ def interference(plate, sigma=SIGMA):
         if cell["is_in_crystal"] == False:
             cell["d"] = cell["d"] * (1 + (random.random()- 0.5) * sigma)
     return None
-                
+
+def is_border_correct(plate, cells_at_border):
+    """
+    Checks if border is correct
+    
+    :param plate: (dict) the support of the simulation
+    :param cells_at_border: (set) the coordinates of the cells at the border
+    :return: (bool) True if it is correct, False otherwise
+    """
+    for (y,x) in NEIGHBOURS:
+        cell_di = plate[y][x]
+        neighbours = {} # A dictionnary of all neighbours key: coordinates value: dictionnary
+        for y2, x2 in NEIGHBOURS[(y, x)]:
+            neighbours[(y2,x2)] = plate[y2][x2]
+            
+        if (y, x) in cells_at_border:
+            has_neighbour = False
+            for neigh_coord, neigh_di in neighbours.items():
+                if neigh_di["is_in_crystal"] == True:
+                    has_neighbour = True
+                    break
+            if not has_neighbour:
+                return False
+        
+        elif cell_di["is_in_crystal"] == True:
+            if (y,x) in cells_at_border:
+                return False
+        
+        else:
+            has_neighbour = False
+            for neigh_coord, neigh_di in neighbours.items():
+                if neigh_di["is_in_crystal"] == True:
+                    has_neighbour = True
+                    break
+            if has_neighbour:
+                return False
+    return True
+
 def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA):
     """
     Displays a snowflake.
@@ -271,10 +305,10 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
         #DIFFUSION
         plate = diffusion(plate)
         
-        new_cells_at_border = set()
         changes_to_make = {}
         for cell in cells_at_border: # `cell` is a tuple of coordinates
             cell_di = plate[cell[0]][cell[1]] # `cell_di` is a dictionnary
+            
             # FREEZING
             cell_di = freezing(cell_di)
             
@@ -282,20 +316,28 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
             neighbours = {} # A dictionnary of all neighbours key: coordinates value: dictionnary
             for y, x in NEIGHBOURS[(cell[0], cell[1])]:
                 neighbours[(y,x)] = plate[y][x]
-            new_cell, new_cells_at_border = attachment(cell_di, cell, neighbours, new_cells_at_border, i)
-            if new_cell:
+            new_cell = attachment(cell_di, cell, neighbours, i)
+            if new_cell: # If not None in this case
                 changes_to_make[(cell[0], cell[1])] = new_cell
             
             # MELTING
             cell_di = melting(cell_di)
+            
         # INTERFERENCE
-        interference(plate, i)
+        interference(plate)
         
-        # We now apply the changes made by the attachment phase
         for coord, di in changes_to_make.items(): 
-            plate[coord[0]][coord[1]] = di
-        # We updated the cells at the border
-        cells_at_border = new_cells_at_border
+            plate[coord[0]][coord[1]] = di # We apply the changes done at the attachment phase
+            
+            # We update the cells at the border
+            neighbours = {}
+            for y, x in NEIGHBOURS[(coord[0], coord[1])]: # All the neighbours of the cell we changed
+                neighbours[(y,x)] = plate[y][x] # We create a dictionnary of the neighbours
+            for neigh_coord, di in neighbours.items():
+                if di["is_in_crystal"] == False and not neigh_coord in changes_to_make:
+                    cells_at_border.add(neigh_coord) # We add the new cells at the border
+            cells_at_border.remove(coord) # We remove the old cell at the border
+        
         
         # Display in shell DEBUG
         if i % 5 == 0:
@@ -307,6 +349,7 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
                         print("X", end=" ")
                 print()
             print()
+        assert is_border_correct(plate, cells_at_border), "border was not correct"
         # Displaying the plate with the PILLOW library
         
         # Maybe saving its state for further research
