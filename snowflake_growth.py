@@ -5,10 +5,14 @@
 
 Simulates the growth of a snowflake and displays it in real-time
 """
+
+from __future__ import print_function
+from PIL import Image
 from copy import copy, deepcopy
 import random
 
 NUMBER = 200
+
 
 # Coefficients of the attachment phase
 ALPHA = 0.7
@@ -21,9 +25,11 @@ MU = 0.5 # Proportion of water that transforms into steam
 KAPPA = 0.6 # Proportion of steam which transforms into ice for a border cell
 RHO = 1.1 # Density of steam in each cell at the begining of the simulation
 
+
 SIGMA = 0.001 # Coefficient for the interference
 
 DIMENSION = (50, 50) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
+
 DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
 # b == proportion of quasi-liquid water
 # c == proportion of ice
@@ -59,7 +65,7 @@ def create_plate(dim=DIMENSION, initial_position=-1):
     ...         print("}, ", end="")
     ...     print("]")
     [{b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, ]
-    [{b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 1 , d : 0 , is_in_crystal : True , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, ]
+    [{b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 1 , d : 0 , i : 0 , is_in_crystal : True , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, ]
     [{b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, ]
     >>> DEFAULT_CELL["d"] = RHO # Reverts to original state
     
@@ -273,7 +279,28 @@ def is_border_correct(plate, cells_at_border):
             if has_neighbour:
                 return False
     return True
-
+  
+def savestates(plate, filename, n=0):
+    """
+    Create a JPEG of the snowflake.
+    :param plate: (list of list of dict) The plate which contain the cristal.
+    :param filename: (str) Name of the file.
+    :param n: (int) The n-th iteration of the snowflake.
+        0 by default, if the param doesn't change you will only get the last image.
+    """
+    pixels_snowflake = []
+    for line in plate:
+        for d in line:
+            if d["is_in_crystal"] == False:
+                pixels_snowflake += [(0,0,0)]
+            else:
+                pixels_snowflake += [(0,255,255)]
+        snowflake = Image.new("RGB", DIMENSION, color=0)
+        snowflake.putdata(pixels_snowflake)
+        snowflake.save(filename + str(n), format="JPEG")
+        # WARNING! This will create *NUMBER* JPEGs, so do it in a folder!
+    return
+  
 def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA):
     """
     Displays a snowflake.
@@ -304,7 +331,7 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
     for i in range(number):
         #DIFFUSION
         plate = diffusion(plate)
-        
+
         changes_to_make = {}
         for cell in cells_at_border: # `cell` is a tuple of coordinates
             cell_di = plate[cell[0]][cell[1]] # `cell_di` is a dictionnary
@@ -350,9 +377,12 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
                 print()
             print()
         assert is_border_correct(plate, cells_at_border), "border was not correct"
-        # Displaying the plate with the PILLOW library
-        
-        # Maybe saving its state for further research
+
+        if i % 10 == 0:
+            savestates(plate, "snowflake", i)
+    savestates(plate, "snowflake", i)
+    return
+
 
 # Create a dictionnary which maps a list of neighbours coordinates to the coordinates of a cell
 # To access the neughbours of a cell which coordinates are (a, b) you do NEIGHBOURS[(a, b)]
