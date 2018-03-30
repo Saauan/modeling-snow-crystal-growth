@@ -280,7 +280,7 @@ def is_border_correct(plate, cells_at_border):
                 return False
     return True
   
-def savestates(plate, filename, n=0):
+def savestates(plate, filename, pixels_snowflake, n=0):
     """
     Create a JPEG of the snowflake.
     :param plate: (list of list of dict) The plate which contain the cristal.
@@ -288,17 +288,59 @@ def savestates(plate, filename, n=0):
     :param n: (int) The n-th iteration of the snowflake.
         0 by default, if the param doesn't change you will only get the last image.
     """
-    pixels_snowflake = []
+    y = 0
     for line in plate:
+        x = 0
         for d in line:
-            if d["is_in_crystal"] == False:
-                pixels_snowflake += [(0,0,0)]
-            else:
-                pixels_snowflake += [(0,255,255)]
-        snowflake = Image.new("RGB", DIMENSION, color=0)
+            if d["is_in_crystal"]:
+                if y % 2 == 0:
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                    
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                        
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                        
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                else:
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                    
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                        
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+                        
+                    pixels_snowflake[] = (0,255,255)
+                    pixels_snowflake[] = (0,255,255)
+            x += 1
+        snowflake = Image.new("RGB", (DIMENSION[1]*4, DIMENSION[0]*5), color=0)
         snowflake.putdata(pixels_snowflake)
-        snowflake.save(filename + str(n), format="JPEG")
+        snowflake.save(filename + str(n) + ".png")
         # WARNING! This will create *NUMBER* JPEGs, so do it in a folder!
+        y += 1
     return
   
 def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA):
@@ -326,6 +368,11 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
     if init_pos == -1: # Initialises the `cells_at_border` set
         init_pos = (dim[0]//2, dim[1]//2)
     cells_at_border = set(NEIGHBOURS[(init_pos[0], init_pos[1])]) # set of tuples of coordinates
+    
+    pixels_snowflake = []
+    for j in range(DIMENSION[1]*5):
+        for i in range(DIMENSION[0]*4):
+            pixels_snowflake += [(0, 0, 0)]
     
     # Runs the simulation `number` times
     for i in range(number):
@@ -379,8 +426,8 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
         assert is_border_correct(plate, cells_at_border), "border was not correct"
 
         if i % 10 == 0:
-            savestates(plate, "snowflake", i)
-    savestates(plate, "snowflake", i)
+            savestates(plate, "snowflake", pixels_snowflake, i)
+    savestates(plate, "snowflake", pixels_snowflake, i)
     return
 
 
