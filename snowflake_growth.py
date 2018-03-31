@@ -10,13 +10,14 @@ from __future__ import print_function
 from PIL import Image
 from copy import copy, deepcopy
 import random
+import os
 
-NUMBER = 200
+NUMBER = 50
 
 
 # Coefficients of the attachment phase
 ALPHA = 0.7
-BETA  = 0.6
+BETA = 0.6
 THETA = 0.7
 # Coefficients of the melting phase
 GAMMA = 0.5 # Proportion of ice that transforms into steam
@@ -25,10 +26,12 @@ MU = 0.5 # Proportion of water that transforms into steam
 KAPPA = 0.6 # Proportion of steam which transforms into ice for a border cell
 RHO = 1.1 # Density of steam in each cell at the begining of the simulation
 
+# 30 : No loss on 400*400
+# 20 : Little loss on the branches on 400*400
+APPROXIMATION = 30
+SIGMA = 0.0000 # Coefficient for the interference
 
-SIGMA = 0.001 # Coefficient for the interference
-
-DIMENSION = (50, 50) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
+DIMENSION = (1000, 1000) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
 
 DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
 # b == proportion of quasi-liquid water
@@ -37,6 +40,7 @@ DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
 
 # NOTE : The dimension is in the form (rows, columns) And so are the coordinates
 
+# Setup functions
 def create_plate(dim=DIMENSION, initial_position=-1):
     """
     Returns a newly created plate which is a matrix of dictionnaries (a matrix of cells) and places the first crystal cell in it at the inital_pos
@@ -127,28 +131,42 @@ def get_neighbours(coordinates, dim=DIMENSION):
                 break
     return list_neighbours
 
-def diffusion(plate_in):
+# Dynamics functions
+def diffusion_cell(y, x, cell, changes_to_make, plate_in):
+    """
+    Adds to the `changes_to_make` dictionnary the changes that will have to be applied to the `cell` at coordinates `y` `x` during the diffusion phase.
+    """
+    if cell["is_in_crystal"] == False:
+        assert cell["is_in_crystal"] == False, "a cell was in a crystal" # One must check beforehand the cell is not in the crystal
+        neighbours = NEIGHBOURS[(y, x)]
+        steam = cell["d"]
+        for (y2,x2) in neighbours:
+            dic = plate_in[y2][x2]
+            # If the neighbour is in the crystal, there's no need to add its steam to the mean, therefore, we add the cell's steam
+            if dic["is_in_crystal"] == True:
+                steam += cell["d"]
+            else:
+                steam += dic["d"] # We add the steam of the neighbour to the list of the steams
+        changes_to_make[(y, x)] = steam / (1+len(neighbours))
+        return changes_to_make
+    
+def diffusion(plate_in, init_pos, max_point, approximation=0, approx_intern = 0):
     """
     Returns the plate passed as a parameter updated by the diffusion phase
     
     :param plate: (list(list(dict))) the support of the crystal
     :return: (list(list(dict))) the updated crystal
     """
-    changes_to_make = {}
-    for (y,x) in NEIGHBOURS:
-        cell = plate_in[y][x]
-        if cell["is_in_crystal"] == False:
-            assert cell["is_in_crystal"] == False, "a cell was in a crystal" # One must check beforehand the cell is not in the crystal
-            neighbours = NEIGHBOURS[(y, x)]
-            steam = cell["d"]
-            for (y2,x2) in neighbours:
-                dic = plate_in[y2][x2]
-                # If the neighbour is in the crystal, there's no need to add its steam to the mean, therefore, we add the cell's steam
-                if dic["is_in_crystal"] == True:
-                    steam += cell["d"]
-                else:
-                    steam += dic["d"] # We add the steam of the neighbour to the list of the steams
-            changes_to_make[(y, x)] = steam / (1+len(neighbours))
+    changes_to_make = {} # The changes are recorded and applied only when there's no more changes to record
+    if not approximation:
+        for (y,x) in NEIGHBOURS:
+            cell = plate_in[y][x]
+            diffusion_cell(y, x, cell, changes_to_make, plate_in)
+    else:
+        for y in range(max(0, init_pos[0] - approximation - max_point), min(DIMENSION[0], init_pos[0]+approximation + max_point)):
+            for x in range(max(0, init_pos[1] - approximation - max_point), min(DIMENSION[1], init_pos[1] + approximation + max_point)):
+                cell = plate_in[y][x]
+                diffusion_cell(y, x, cell, changes_to_make, plate_in)
     for coord, value in changes_to_make.items(): 
         plate_in[coord[0]][coord[1]]["d"] = value
     return plate_in
@@ -280,67 +298,27 @@ def is_border_correct(plate, cells_at_border):
                 return False
     return True
   
-def savestates(plate, filename, pixels_snowflake, n=0):
+def savestates(plate, filename, n, newpath):
     """
     Create a JPEG of the snowflake.
+    
     :param plate: (list of list of dict) The plate which contain the cristal.
     :param filename: (str) Name of the file.
     :param n: (int) The n-th iteration of the snowflake.
         0 by default, if the param doesn't change you will only get the last image.
     """
-    y = 0
-    for line in plate:
-        x = 0
-        for d in line:
-            if d["is_in_crystal"]:
-                if y % 2 == 0:
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                    
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                        
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                        
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                else:
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                    
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                        
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-                        
-                    pixels_snowflake[] = (0,255,255)
-                    pixels_snowflake[] = (0,255,255)
-            x += 1
-        snowflake = Image.new("RGB", (DIMENSION[1]*4, DIMENSION[0]*5), color=0)
-        snowflake.putdata(pixels_snowflake)
-        snowflake.save(filename + str(n) + ".png")
-        # WARNING! This will create *NUMBER* JPEGs, so do it in a folder!
-        y += 1
+    pixels_snowflake = []
+    for y in range(DIMENSION[0]):
+        for x in range(DIMENSION[1]):
+            d = plate[y][x]
+            if d["is_in_crystal"] == False:
+                pixels_snowflake.append((0,0,0))
+            else:
+                pixels_snowflake.append((0,255,(int(d["i"]/NUMBER*255))))
+    snowflake = Image.new("RGB", DIMENSION, color=0)
+    snowflake.putdata(pixels_snowflake)
+    snowflake.save(newpath + "/" + filename + str(n) + ".png", format="PNG")
+    # WARNING! This will create *NUMBER* JPEGs, so do it in a folder!
     return
   
 def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA):
@@ -365,19 +343,19 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
     """
     plate = create_plate()
     
+    newpath = "./a{alpha}_b{beta}_t{theta}_m{mu}_g{gamma}_k{kappa}_r{rho}_approx{approx}".format(beta=BETA, alpha=ALPHA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, rho=RHO, approx=APPROXIMATION)
+    print(newpath)
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)    
+
     if init_pos == -1: # Initialises the `cells_at_border` set
         init_pos = (dim[0]//2, dim[1]//2)
     cells_at_border = set(NEIGHBOURS[(init_pos[0], init_pos[1])]) # set of tuples of coordinates
-    
-    pixels_snowflake = []
-    for j in range(DIMENSION[1]*5):
-        for i in range(DIMENSION[0]*4):
-            pixels_snowflake += [(0, 0, 0)]
-    
+    max_point = 0
     # Runs the simulation `number` times
     for i in range(number):
         #DIFFUSION
-        plate = diffusion(plate)
+        plate = diffusion(plate, init_pos, max_point, approximation=APPROXIMATION)
 
         changes_to_make = {}
         for cell in cells_at_border: # `cell` is a tuple of coordinates
@@ -398,36 +376,28 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
             cell_di = melting(cell_di)
             
         # INTERFERENCE
-        interference(plate)
+        #interference(plate)
         
         for coord, di in changes_to_make.items(): 
             plate[coord[0]][coord[1]] = di # We apply the changes done at the attachment phase
-            
+            max_point = max(abs(init_pos[0] - coord[0]), abs(init_pos[1] - coord[1]), max_point)
             # We update the cells at the border
             neighbours = {}
             for y, x in NEIGHBOURS[(coord[0], coord[1])]: # All the neighbours of the cell we changed
                 neighbours[(y,x)] = plate[y][x] # We create a dictionnary of the neighbours
+            
             for neigh_coord, di in neighbours.items():
-                if di["is_in_crystal"] == False and not neigh_coord in changes_to_make:
+                if (di["is_in_crystal"] == False 
+                    and (not neigh_coord in changes_to_make)):
                     cells_at_border.add(neigh_coord) # We add the new cells at the border
             cells_at_border.remove(coord) # We remove the old cell at the border
         
         
-        # Display in shell DEBUG
-        if i % 5 == 0:
-            for line in plate:
-                for d in line:
-                    if d["is_in_crystal"] == False:
-                        print(".", end=" ")
-                    else:
-                        print("X", end=" ")
-                print()
-            print()
-        assert is_border_correct(plate, cells_at_border), "border was not correct"
-
-        if i % 10 == 0:
-            savestates(plate, "snowflake", pixels_snowflake, i)
-    savestates(plate, "snowflake", pixels_snowflake, i)
+        
+        if i % 100 == 0:
+            savestates(plate, "snowflake", i, newpath)
+            print(i, max_point)
+    savestates(plate, "snowflake", i, newpath)
     return
 
 
