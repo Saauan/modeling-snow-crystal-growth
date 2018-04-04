@@ -146,8 +146,9 @@ def diffusion_cell(y, x, cell, changes_to_make, plate_in):
     >>> diffusion_cell(0, 0, little_plate[0][0], {}, little_plate)
     {(0, 0): 1.1}
     >>> little_plate[0][0]["d"] = 0.5
-    >>> diffusion_cell(0, 0, little_plate[0][0], {(0, 2): 1.0}, little_plate)
-    {(0, 0): 0.9, (0, 2): 1.0}
+    >>> cell = diffusion_cell(0, 0, little_plate[0][0], {(0, 2): 1.0}, little_plate)
+    >>> cell == {(0, 0): 0.9, (0, 2): 1.0}
+    True
     """
     if cell["is_in_crystal"] == False:
         assert cell["is_in_crystal"] == False, "a cell was in a crystal" # One must check beforehand the cell is not in the crystal
@@ -163,7 +164,7 @@ def diffusion_cell(y, x, cell, changes_to_make, plate_in):
         changes_to_make[(y, x)] = steam / (1+len(neighbours))
         return changes_to_make
     
-def diffusion(plate_in, init_pos, max_point, approximation=0, approx_intern = 0):
+def diffusion(plate_in, init_pos, max_point, approximation=0):
     """
     Returns the plate passed as a parameter updated by the diffusion phase
     
@@ -171,6 +172,14 @@ def diffusion(plate_in, init_pos, max_point, approximation=0, approx_intern = 0)
     :param init_pos: (tuple) the coordinates of the first crystal cell
     :param max_point: (int) the distance between the furthest point from the initial_position and the first cell
     :return: (list(list(dict))) the updated crystal
+
+    Exemple:
+    
+    >>> test_plate = create_plate(dim=(5,5))
+    >>> test_plate[0][0]["d"] = 10
+    >>> test_plate = diffusion(test_plate, (1,1), 0)
+    >>> test_plate == [[{'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 4.066666666666666}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 2.88}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.1}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.1}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.1}], [{'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 2.583333333333333}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.0999999999999999}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.0999999999999999}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.0999999999999999}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.1}], [{'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.1}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.0999999999999999}, {'is_in_crystal': True, 'b': 0, 'c': 1, 'd': 0, 'i': 0}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.0999999999999999}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.0999999999999999}], [{'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.0999999999999999}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.0999999999999999}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.0999999999999999}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.0999999999999999}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.1}], [{'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.1}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.1}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.1}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.1}, {'is_in_crystal': False, 'b': 0, 'c': 0, 'd': 1.1}]]
+    True
     """
     changes_to_make = {} # The changes are recorded and applied only when there's no more changes to record
     if not approximation:
@@ -295,6 +304,7 @@ def is_border_correct(plate, cells_at_border):
     >>> is_border_correct(little_plate, {(0,0)})
     False
     >>> is_border_correct(little_plate, {(2, 1), (1, 1), (1, 2), (2, 3), (3, 2), (3, 1)})
+    True
     """
     for (y,x) in NEIGHBOURS:
         cell_di = plate[y][x]
@@ -436,11 +446,15 @@ for i in range(DIMENSION[0]):
     for j in range(DIMENSION[1]):
         NEIGHBOURS[(i,j)] = get_neighbours((i,j))
         
-model_snowflake()
+#model_snowflake()
+
 
 if __name__ == '__main__':
     little_plate = create_plate(dim=(5,5))
-    
+    NEIGHBOURS = {}
+    for i in range(5):
+        for j in range(5):
+            NEIGHBOURS[(i,j)] = get_neighbours((i,j), dim=(5,5))    
     import doctest
     doctest.testmod()
     
