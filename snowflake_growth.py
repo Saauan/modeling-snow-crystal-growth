@@ -11,6 +11,7 @@ from PIL import Image
 from copy import copy, deepcopy
 import random
 import os
+import argparse
 
 NUMBER = 50
 
@@ -31,7 +32,7 @@ RHO = 1.1 # Density of steam in each cell at the begining of the simulation
 APPROXIMATION = 30
 SIGMA = 0.0000 # Coefficient for the interference
 
-DIMENSION = (1000, 1000) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
+DIMENSION = (100, 100) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
 
 DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
 # b == proportion of quasi-liquid water
@@ -407,7 +408,54 @@ NEIGHBOURS = {}
 for i in range(DIMENSION[0]):
     for j in range(DIMENSION[1]):
         NEIGHBOURS[(i,j)] = get_neighbours((i,j))
-        
+
+
+
+parser = argparse.ArgumentParser(description='Allow the user to generate a snowflake.',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+parser.add_argument('-a', '--alpha', type=float,
+                    help='The Alpha value, 1st value of the attachment phase.', default=ALPHA)
+
+parser.add_argument('-b', '--beta', type=float,
+                    help='The Beta value, 2nd value of the attachment phase.', default=BETA)
+
+parser.add_argument('-t','-theta', type=float,
+                    help='The Theta value, 3rd value of the attachment phase.', default=THETA)
+
+parser.add_argument('-n','-number', type=int,
+                    help='The Number of iterations.', default=NUMBER)
+
+parser.add_argument('-g','-gamma', type=float,
+                    help='The Gamma value, 1st coefficient of the melting phase, corresponds to the ice transformed into steam.', default=GAMMA)
+
+parser.add_argument('-m','-mu', type=float,
+                    help='The Mu value, 2nd coefficient of the melting phase, corresponds to the water transformed into steam.', default=MU)
+
+parser.add_argument('-k','-kappa', type=float,
+                    help='The Kappa value, coefficient of the freezing phase, corresponds to steam which is transformed into ice for a border cell.', default=KAPPA)
+
+parser.add_argument('-r', '-rho', type=float,
+                    help='The Rho value, corresponds to the density of steam in each cell at the beginning of the simulation.', default=RHO)
+
+parser.add_argument('-app', '-approximation', type=int,
+                    help='The Approximation value, the range which represents the distance from the initial cell where the calculous are made.', default=APPROXIMATION)
+
+parser.add_argument('-s', '-sigma', type=float,
+                    help='The Sigma value, corresponds to the interference.', default=SIGMA)
+
+parser.add_argument('-d', '-dimension', type=int,
+                    help='The Dimension value, corresponds to the size of your screen for the creation of the snowflake.', default=DIMENSION[0])
+
+parser.add_argument('-f', '-frequency', type=int,
+                    help='The Frequency value, every time we pass the number of frames corresponding to the frequency, a picture is created.', default=50)
+parmeter = vars(parser.parse_args())
+
+SIGMA = parameter['s']
+
+
+
+
+
 model_snowflake()
 
 if __name__ == '__main__':
