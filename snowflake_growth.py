@@ -5,33 +5,31 @@
 
 Simulates the growth of a snowflake and displays it in real-time
 """
-
-from __future__ import print_function
 from PIL import Image
 from copy import copy, deepcopy
 import random
 import os
 
-NUMBER = 50
+NUMBER = 100
 
 
 # Coefficients of the attachment phase
-ALPHA = 0.7
+ALPHA = 0.5
 BETA = 0.6
 THETA = 0.7
 # Coefficients of the melting phase
 GAMMA = 0.5 # Proportion of ice that transforms into steam
 MU = 0.5 # Proportion of water that transforms into steam
 
-KAPPA = 0.6 # Proportion of steam which transforms into ice for a border cell
+KAPPA = 0.6 # Proportion of steam which transforms into ice for a border cell at the freezing phase
 RHO = 1.1 # Density of steam in each cell at the begining of the simulation
 
 # 30 : No loss on 400*400
 # 20 : Little loss on the branches on 400*400
 APPROXIMATION = 30
-SIGMA = 0.0000 # Coefficient for the interference
+SIGMA = 0.000 # Coefficient for the interference
 
-DIMENSION = (1000, 1000) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
+DIMENSION = (300, 300) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
 
 DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
 # b == proportion of quasi-liquid water
@@ -72,7 +70,6 @@ def create_plate(dim=DIMENSION, initial_position=-1):
     [{b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 1 , d : 0 , i : 0 , is_in_crystal : True , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, ]
     [{b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, {b : 0 , c : 0 , d : 1 , is_in_crystal : False , }, ]
     >>> DEFAULT_CELL["d"] = RHO # Reverts to original state
-    
     """
     plate = [[copy(DEFAULT_CELL) for j in range(dim[1])] for i in range(dim[0])]
     if initial_position == -1:
@@ -135,6 +132,22 @@ def get_neighbours(coordinates, dim=DIMENSION):
 def diffusion_cell(y, x, cell, changes_to_make, plate_in):
     """
     Adds to the `changes_to_make` dictionnary the changes that will have to be applied to the `cell` at coordinates `y` `x` during the diffusion phase.
+    
+    :param y: (int) the y coordinate of the cell
+    :param x: (int) the x coordinate of the cell
+    :param cell: (dict) A cell
+    :param changes_to_make: (dict) A dictionnary which records all changes that have to be made at the end of the phase
+    :param plate_in: (list(list(dict))) The support of the simulation 
+    :return: (dict) changes_to_make
+    
+    UC : x and y positives and in the dimension
+    Exemple:
+    
+    >>> diffusion_cell(0, 0, little_plate[0][0], {}, little_plate)
+    {(0, 0): 1.1}
+    >>> little_plate[0][0]["d"] = 0.5
+    >>> diffusion_cell(0, 0, little_plate[0][0], {(0, 2): 1.0}, little_plate)
+    {(0, 0): 0.9, (0, 2): 1.0}
     """
     if cell["is_in_crystal"] == False:
         assert cell["is_in_crystal"] == False, "a cell was in a crystal" # One must check beforehand the cell is not in the crystal
@@ -155,6 +168,8 @@ def diffusion(plate_in, init_pos, max_point, approximation=0, approx_intern = 0)
     Returns the plate passed as a parameter updated by the diffusion phase
     
     :param plate: (list(list(dict))) the support of the crystal
+    :param init_pos: (tuple) the coordinates of the first crystal cell
+    :param max_point: (int) the distance between the furthest point from the initial_position and the first cell
     :return: (list(list(dict))) the updated crystal
     """
     changes_to_make = {} # The changes are recorded and applied only when there's no more changes to record
@@ -183,6 +198,10 @@ def freezing(di, k=KAPPA):
     :return: (dict) The updated cell.
     
     UC: A valid plate, 0 <= k <= 1
+    
+    >>> test = freezing(little_plate[1][1])
+    >>> test == {'b': 0.44000000000000006, 'is_in_crystal': False, 'd': 0, 'c': 0.66}
+    True
     """ 
     di["b"] = di["b"] + (1 - k) * di["d"]
     di["c"] = di["c"] + k * di["d"]
@@ -239,6 +258,10 @@ def melting(di, mu=MU, gamma=GAMMA):
     :param mu: (float) [DEFAULT: MU] proportion of water that transforms into steam 
     :param gamma: (float) [DEFAULT: GAMMA] proportion of ice that transforms into steam
     :return: (dict) the updated cell
+    
+    >>> test = melting(little_plate[1][1])
+    >>> test == {'is_in_crystal': False, 'd': 0.55, 'b': 0.22000000000000003, 'c': 0.33}
+    True
     """
     di["d"] = di["d"] + mu * di["b"] + gamma * di["c"]
     di["b"] = (1-mu) * di["b"]
@@ -268,6 +291,10 @@ def is_border_correct(plate, cells_at_border):
     :param plate: (dict) the support of the simulation
     :param cells_at_border: (set) the coordinates of the cells at the border
     :return: (bool) True if it is correct, False otherwise
+    
+    >>> is_border_correct(little_plate, {(0,0)})
+    False
+    >>> is_border_correct(little_plate, {(2, 1), (1, 1), (1, 2), (2, 3), (3, 2), (3, 1)})
     """
     for (y,x) in NEIGHBOURS:
         cell_di = plate[y][x]
@@ -312,7 +339,7 @@ def savestates(plate, filename, n, newpath):
         for x in range(DIMENSION[1]):
             d = plate[y][x]
             if d["is_in_crystal"] == False:
-                pixels_snowflake.append((0,0,0))
+                pixels_snowflake.append((0,0,255 - int(d["d"]*255)))
             else:
                 pixels_snowflake.append((0,255,(int(d["i"]/NUMBER*255))))
     snowflake = Image.new("RGB", DIMENSION, color=0)
@@ -321,7 +348,7 @@ def savestates(plate, filename, n, newpath):
     # WARNING! This will create *NUMBER* JPEGs, so do it in a folder!
     return
   
-def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA):
+def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, sigma=SIGMA):
     """
     Displays a snowflake.
     This is the main function of the program, it will actualise the snowflake as well as displaying it and will eventually save its state
@@ -341,7 +368,7 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
     :param k: (float) [DEFAULT: KAPPA] The fraction used fo the evolution of the snowflake.
     :return: None
     """
-    plate = create_plate()
+    plate = create_plate(initial_position = init_pos)
     
     newpath = "./a{alpha}_b{beta}_t{theta}_m{mu}_g{gamma}_k{kappa}_r{rho}_approx{approx}".format(beta=BETA, alpha=ALPHA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, rho=RHO, approx=APPROXIMATION)
     print(newpath)
@@ -376,7 +403,8 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
             cell_di = melting(cell_di)
             
         # INTERFERENCE
-        #interference(plate)
+        if sigma:
+            interference(plate)
         
         for coord, di in changes_to_make.items(): 
             plate[coord[0]][coord[1]] = di # We apply the changes done at the attachment phase
@@ -411,6 +439,8 @@ for i in range(DIMENSION[0]):
 model_snowflake()
 
 if __name__ == '__main__':
+    little_plate = create_plate(dim=(5,5))
+    
     import doctest
     doctest.testmod()
     
