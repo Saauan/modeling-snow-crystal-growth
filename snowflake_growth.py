@@ -10,13 +10,13 @@ from copy import copy, deepcopy
 import random
 import os
 import argparse
+import imageio
 
 NUMBER = 300
 
 
 # Coefficients of the attachment phase
-ALPHA = 0.7
-
+ALPHA = 0.6
 BETA = 0.6
 THETA = 0.7
 # Coefficients of the melting phase
@@ -24,11 +24,11 @@ GAMMA = 0.5 # Proportion of ice that transforms into steam
 MU = 0.5 # Proportion of water that transforms into steam
 
 KAPPA = 0.6 # Proportion of steam which transforms into ice for a border cell at the freezing phase
-RHO = 1.1 # Density of steam in each cell at the begining of the simulation
+RHO = 1 # Density of steam in each cell at the begining of the simulation
 
 # 30 : No loss on 400*400
 # 20 : Little loss on the branches on 400*400
-APPROXIMATION = 30
+APPROXIMATION = 40
 SIGMA = 0.000 # Coefficient for the interference
 DIMENSION = (300, 300) # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
 
@@ -342,7 +342,7 @@ def is_border_correct(plate, cells_at_border):
                 return False
     return True
   
-def savestates(plate, filename, n, newpath):
+def savestates(plate, filename, n, newpath, number=NUMBER):
     """
     Create a JPEG of the snowflake.
     
@@ -350,20 +350,36 @@ def savestates(plate, filename, n, newpath):
     :param filename: (str) Name of the file.
     :param n: (int) The n-th iteration of the snowflake.
         0 by default, if the param doesn't change you will only get the last image.
+    :param number: (int) [DEFAULT:NUMBER] the total number of iterations
     """
     pixels_snowflake = []
     for y in range(DIMENSION[0]):
         for x in range(DIMENSION[1]):
             d = plate[y][x]
             if d["is_in_crystal"] == False:
-                pixels_snowflake.append((0,0,255 - int(d["d"]*255)))
+                pixels_snowflake.append((0,0,255 - int((d["d"] / RHO)*255)))
             else:
                 pixels_snowflake.append((0,255,(int(d["i"]/NUMBER*255))))
     snowflake = Image.new("RGB", DIMENSION, color=0)
     snowflake.putdata(pixels_snowflake)
-    snowflake.save(newpath + "/" + filename + str(n) + ".png", format="PNG")
+    index_number = str(n).zfill(len(str(number))) # Adds leading zeros in front of the index (instead of 50 we would get 050)
+    snowflake.save(newpath + "/" + filename + index_number + ".png", format="PNG")
     # WARNING! This will create *NUMBER* JPEGs, so do it in a folder!
     return
+  
+def create_gif(path):
+    """
+    Creates a gif of all the images from the simulation. It will be saved in the same folder as the pictures
+    
+    :param path: (str) the path of the folder in which the pictures are saved
+    :return: None
+    """
+    list_pictures = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+    images = []
+    for filename in list_pictures:
+        images.append(imageio.imread(path + "/" + filename))
+    imageio.mimsave(path + "/legif.gif", images)
+  
   
 def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, sigma=SIGMA):
     """
@@ -438,11 +454,14 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
             cells_at_border.remove(coord) # We remove the old cell at the border
         
         
-        
-        if i % 100 == 0:
+        # Saves the state of the plate
+        if i % 20 == 0:
             savestates(plate, "snowflake", i, newpath)
             print(i, max_point)
     savestates(plate, "snowflake", i, newpath)
+    
+    create_gif(newpath) # Creates a gif from all the pictures saved from the plate
+    
     return
 
 
@@ -491,13 +510,28 @@ parser.add_argument('-d', '-dimension', type=int,
 
 parser.add_argument('-f', '-frequency', type=int,
                     help='The Frequency value, every time we pass the number of frames corresponding to the frequency, a picture is created.', default=50)
-parmeter = vars(parser.parse_args())
+parameter = vars(parser.parse_args())
 
 SIGMA = parameter['s']
 
 model_snowflake()
 
 if __name__ == '__main__':
+    ALPHA = 0.7
+    BETA = 0.6
+    THETA = 0.7
+    # Coefficients of the melting phase
+    GAMMA = 0.5 # Proportion of ice that transforms into steam
+    MU = 0.5 # Proportion of water that transforms into steam
+    
+    KAPPA = 0.6 # Proportion of steam which transforms into ice for a border cell at the freezing phase
+    RHO = 1.1 # Density of steam in each cell at the begining of the simulation
+    
+    # 30 : No loss on 400*400
+    # 20 : Little loss on the branches on 400*400
+    APPROXIMATION = 40
+    SIGMA = 0.000 # Coefficient for the interference
+    DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
     little_plate = create_plate(dim=(5,5))
     NEIGHBOURS = {}
     for i in range(5):
