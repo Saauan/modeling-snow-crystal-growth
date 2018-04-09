@@ -5,6 +5,7 @@
 
 Simulates the growth of a snowflake and displays it in real-time
 """
+
 from PIL import Image, ImageDraw
 from copy import copy, deepcopy
 import random
@@ -12,25 +13,26 @@ import os
 import argparse
 import imageio
 
-NUMBER = 2000
+NUMBER = 1000
+
 
 
 # Coefficients of the attachment phase
 ALPHA = 0.6
 BETA = 0.6
-THETA = 0.8
+THETA = 0.7
 # Coefficients of the melting phase
 GAMMA = 0.5 # Proportion of ice that transforms into steam
 MU = 0.5 # Proportion of water that transforms into steam
 
 KAPPA = 0.6 # Proportion of steam which transforms into ice for a border cell at the freezing phase
-RHO = 1.1 # Density of steam in each cell at the begining of the simulation
+RHO = 1 # Density of steam in each cell at the begining of the simulation
 
 # 30 : No loss on 400*400
 # 20 : Little loss on the branches on 400*400
-APPROXIMATION = 25
+APPROXIMATION = 40
 SIGMA = 0.000 # Coefficient for the interference
-DIMENSION = [500,500] # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
+DIMENSION = [800,800] # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
 
 DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
 # b == proportion of quasi-liquid water
@@ -420,7 +422,6 @@ def savestates(plate, filename, n, newpath, number=NUMBER):
                 pixels_snowflake.append((0,255,(int(d["i"]/NUMBER*255))))
     snowflake = Image.new("RGB", DIMENSION, color=0)
     snowflake.putdata(pixels_snowflake)
-
     snowflake.save(newpath + "pixel/" + filename + index_number + ".png", format="PNG")
     
     
