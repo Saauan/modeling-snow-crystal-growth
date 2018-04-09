@@ -5,7 +5,8 @@
 
 Simulates the growth of a snowflake and displays it in real-time
 """
-from PIL import Image
+
+from PIL import Image, ImageDraw
 from copy import copy, deepcopy
 import random
 import os
@@ -13,6 +14,7 @@ import argparse
 import imageio
 
 NUMBER = 1000
+
 
 
 # Coefficients of the attachment phase
@@ -399,7 +401,7 @@ def is_border_correct(plate, cells_at_border):
   
 def savestates(plate, filename, n, newpath, number=NUMBER):
     """
-    Create a JPEG of the snowflake.
+    Create a JPEG and a PNG of the snowflake.
     
     :param plate: (list of list of dict) The plate which contain the cristal.
     :param filename: (str) Name of the file.
@@ -408,6 +410,9 @@ def savestates(plate, filename, n, newpath, number=NUMBER):
     :param number: (int) [DEFAULT:NUMBER] the total number of iterations
     """
     pixels_snowflake = []
+    index_number = str(n).zfill(len(str(number))) # Adds leading zeros in front of the index (instead of 50 we would get 050)
+    
+    # Creating the pixel image
     for y in range(DIMENSION[0]):
         for x in range(DIMENSION[1]):
             d = plate[y][x]
@@ -417,9 +422,35 @@ def savestates(plate, filename, n, newpath, number=NUMBER):
                 pixels_snowflake.append((0,255,(int(d["i"]/NUMBER*255))))
     snowflake = Image.new("RGB", DIMENSION, color=0)
     snowflake.putdata(pixels_snowflake)
-    index_number = str(n).zfill(len(str(number))) # Adds leading zeros in front of the index (instead of 50 we would get 050)
-    snowflake.save(newpath + "/" + filename + index_number + ".png", format="PNG")
-    # WARNING! This will create *NUMBER* JPEGs, so do it in a folder!
+    snowflake.save(newpath + "pixel/" + filename + index_number + ".png", format="PNG")
+    
+    
+    # Creating the Hexagon Image
+    # Half the height of the hexagon
+    x = 12*DIMENSION[1]+6
+    y = DIMENSION[0]*11+3
+    snowflake = Image.new("RGB", (x, y), color=0)
+    for y in range(DIMENSION[0]):
+        for x in range(DIMENSION[1]):
+            
+            # Add the horizontal offset on every other row
+            x_ = 0 if (y % 2 == 0) else 6
+            
+            shape = [
+                (12*x +6  +x_, y*10    ),
+                (12*x +12 +x_, y*10 +3 ),
+                (12*x +12 +x_, y*10 +11),
+                (12*x +6  +x_, y*10 +14),
+                (12*x     +x_, y*10 +11),
+                (12*x     +x_, y*10 +3 )
+            ]
+            
+            d = plate[y][x]
+            if d["is_in_crystal"] == False:
+                ImageDraw.Draw(snowflake).polygon(xy=shape, fill=(0,0,255 - int((d["d"] / RHO)*255)), outline=(0,0,255 - int((d["d"] / RHO)*255)), )
+            else:
+                ImageDraw.Draw(snowflake).polygon(xy=shape, fill=(0,255,(int(d["i"]/NUMBER*255))), outline=(0,255,(int(d["i"]/NUMBER*255))))
+    snowflake.save(newpath + "hexa/" + filename + index_number + ".jpeg", format="JPEG")
     return
   
 def create_gif(path):
@@ -429,11 +460,19 @@ def create_gif(path):
     :param path: (str) the path of the folder in which the pictures are saved
     :return: None
     """
-    list_pictures = [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+    newpath = path + "pixel/"
+    list_pictures = [f for f in os.listdir(newpath) if (os.path.isfile(os.path.join(newpath, f)) and ("jpeg" in f or "png" in f))]
     images = []
     for filename in list_pictures:
-        images.append(imageio.imread(path + "/" + filename))
-    imageio.mimsave(path + "/legif.gif", images)
+        images.append(imageio.imread(newpath + filename))
+    imageio.mimsave(path + "legif.gif", images)
+    
+#     #Other method
+#     with imageio.get_writer(path + "legif.gif", mode='I', fps=25) as writer:
+#         for filename in list_pictures:
+#             print(path + filename)
+#             image = imageio.imread(path + filename)
+#             writer.append_data(image)
   
   
 def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, sigma=SIGMA):
@@ -458,10 +497,12 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
     """
     plate = create_plate(initial_position = init_pos)
     
-    newpath = "./a{alpha}_b{beta}_t{theta}_m{mu}_g{gamma}_k{kappa}_r{rho}_approx{approx}".format(beta=BETA, alpha=ALPHA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, rho=RHO, approx=APPROXIMATION)
+    newpath = "./a{alpha}_b{beta}_t{theta}_m{mu}_g{gamma}_k{kappa}_r{rho}_approx{approx}/".format(beta=BETA, alpha=ALPHA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, rho=RHO, approx=APPROXIMATION)
     print(newpath)
     if not os.path.exists(newpath):
-        os.makedirs(newpath)    
+        os.makedirs(newpath)
+        os.makedirs(newpath + "/pixel")
+        os.makedirs(newpath + "/hexa")
 
     if init_pos == -1: # Initialises the `cells_at_border` set
         init_pos = (dim[0]//2, dim[1]//2)
@@ -555,3 +596,4 @@ if __name__ == '__main__':
     import doctest
     doctest.testmod()
     
+
