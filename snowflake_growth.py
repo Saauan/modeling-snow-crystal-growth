@@ -463,17 +463,13 @@ def create_gif(path):
     """
     newpath = path + "pixel/"
     list_pictures = [f for f in os.listdir(newpath) if (os.path.isfile(os.path.join(newpath, f)) and ("jpeg" in f or "png" in f))]
-    images = []
-    for filename in list_pictures:
-        images.append(imageio.imread(newpath + filename))
-    imageio.mimsave(path + "legif.gif", images)
+    list_pictures.sort()
     
-#     #Other method
-#     with imageio.get_writer(path + "legif.gif", mode='I', fps=25) as writer:
-#         for filename in list_pictures:
-#             print(path + filename)
-#             image = imageio.imread(path + filename)
-#             writer.append_data(image)
+    with imageio.get_writer(path + "legif.gif", mode='I', fps=25) as writer:
+        for filename in list_pictures:
+            print(newpath + filename)
+            image = imageio.imread(newpath + filename)
+            writer.append_data(image)
   
   
 def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, sigma=SIGMA, frequency=FREQUENCY):
@@ -593,8 +589,5 @@ if __name__ == '__main__':
         for j in range(5):
             NEIGHBOURS[(i,j)] = get_neighbours((i,j), dim=(5,5))    
 
-            
     import doctest
     doctest.testmod()
-    
-
