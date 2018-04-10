@@ -33,6 +33,7 @@ RHO = 1 # Density of steam in each cell at the begining of the simulation
 APPROXIMATION = 40
 SIGMA = 0.000 # Coefficient for the interference
 DIMENSION = [800,800] # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
+FREQUENCY = 20 # The frequency at which the program saves the state
 
 DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
 # b == proportion of quasi-liquid water
@@ -79,7 +80,7 @@ parser.add_argument('-d', '-dimension', type=int,
                     help='The Dimension value, corresponds to the size of your screen for the creation of the snowflake.', default=DIMENSION[0])
 
 parser.add_argument('-f', '-frequency', type=int,
-                    help='The Frequency value, every time we pass the number of frames corresponding to the frequency, a picture is created.', default=50)
+                    help='The Frequency value, every time we pass the number of frames corresponding to the frequency, a picture is created.', default=FREQUENCY)
 
 parameter = vars(parser.parse_args())
 print(parameter)
@@ -475,7 +476,7 @@ def create_gif(path):
 #             writer.append_data(image)
   
   
-def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, sigma=SIGMA):
+def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, sigma=SIGMA, frequency=FREQUENCY):
     """
     Displays a snowflake.
     This is the main function of the program, it will actualise the snowflake as well as displaying it and will eventually save its state
@@ -551,7 +552,7 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
         
         
         # Saves the state of the plate
-        if i % 20 == 0:
+        if i % frequency == 0:
             savestates(plate, "snowflake", i, newpath)
             print(i, max_point)
     savestates(plate, "snowflake", i, newpath)
