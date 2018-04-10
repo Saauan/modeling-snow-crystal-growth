@@ -13,26 +13,26 @@ import os
 import argparse
 import imageio
 
-NUMBER = 1000
+NUMBER = 500
 
 
 
 # Coefficients of the attachment phase
 ALPHA = 0.6
-BETA = 0.6
-THETA = 0.7
+BETA = 0.5
+THETA = 0.6
 # Coefficients of the melting phase
 GAMMA = 0.5 # Proportion of ice that transforms into steam
 MU = 0.5 # Proportion of water that transforms into steam
 
 KAPPA = 0.6 # Proportion of steam which transforms into ice for a border cell at the freezing phase
-RHO = 1 # Density of steam in each cell at the begining of the simulation
+RHO = 1.1 # Density of steam in each cell at the begining of the simulation
 
 # 30 : No loss on 400*400
 # 20 : Little loss on the branches on 400*400
 APPROXIMATION = 40
 SIGMA = 0.000 # Coefficient for the interference
-DIMENSION = [800,800] # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
+DIMENSION = [300,300] # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
 FREQUENCY = 20 # The frequency at which the program saves the state
 
 DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
@@ -46,17 +46,14 @@ DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
 
 parser = argparse.ArgumentParser(description='Allow the user to generate a snowflake.',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-parser.add_argument('-a', '--alpha', type=float,
+parser.add_argument('-a', '-alpha', type=float,
                     help='The Alpha value, 1st value of the attachment phase.', default=ALPHA)
 
-parser.add_argument('-b', '--beta', type=float,
+parser.add_argument('-b', '-beta', type=float,
                     help='The Beta value, 2nd value of the attachment phase.', default=BETA)
 
 parser.add_argument('-t','-theta', type=float,
                     help='The Theta value, 3rd value of the attachment phase.', default=THETA)
-
-parser.add_argument('-n','-number', type=int,
-                    help='The Number of iterations.', default=NUMBER)
 
 parser.add_argument('-g','-gamma', type=float,
                     help='The Gamma value, 1st coefficient of the melting phase, corresponds to the ice transformed into steam.', default=GAMMA)
@@ -70,11 +67,14 @@ parser.add_argument('-k','-kappa', type=float,
 parser.add_argument('-r', '-rho', type=float,
                     help='The Rho value, corresponds to the density of steam in each cell at the beginning of the simulation.', default=RHO)
 
-parser.add_argument('-app', '-approximation', type=int,
-                    help='The Approximation value, the range which represents the distance from the initial cell where the calculous are made.', default=APPROXIMATION)
-
 parser.add_argument('-s', '-sigma', type=float,
                     help='The Sigma value, corresponds to the interference.', default=SIGMA)
+
+parser.add_argument('-app', '-approximation', type=int,
+                    help='The Approximation value, the range which represents the distance from the initial cell where the calculous are made. (Below 20 is deprecated)', default=APPROXIMATION)
+
+parser.add_argument('-n','-number', type=int,
+                    help='The Number of iterations.', default=NUMBER)
 
 parser.add_argument('-d', '-dimension', type=int,
                     help='The Dimension value, corresponds to the size of your screen for the creation of the snowflake.', default=DIMENSION[0])
@@ -85,9 +85,9 @@ parser.add_argument('-f', '-frequency', type=int,
 parameter = vars(parser.parse_args())
 print(parameter)
 
-ALPHA = parameter['alpha']
+ALPHA = parameter['a']
 APPROXIMATION = parameter['app']
-BETA = parameter['beta']
+BETA = parameter['b']
 DIMENSION = (parameter['d'],parameter['d'])
 FREQUENCY = parameter['f']
 GAMMA = parameter['g']
@@ -209,7 +209,6 @@ def diffusion_cell(y, x, cell, changes_to_make, plate_in):
     True
     """
     if cell["is_in_crystal"] == False:
-        assert cell["is_in_crystal"] == False, "a cell was in a crystal" # One must check beforehand the cell is not in the crystal
         neighbours = NEIGHBOURS[(y, x)]
         steam = cell["d"]
         for (y2,x2) in neighbours:
@@ -305,7 +304,7 @@ def attachment(di, cell_at_border, neighbours, ind, alpha=ALPHA, beta=BETA, thet
     for neigh_coord, neigh_di in neighbours.items():
         if neigh_di["is_in_crystal"] == True:
             cristal_neighbours += 1     
-            test_with_theta += neigh_di["d"]
+        test_with_theta += neigh_di["d"]
             
     if (((cristal_neighbours in (1, 2)) and (di["b"] > beta))
         or ((cristal_neighbours == 3) and ((di["b"] >= 1) or ((test_with_theta < theta) and (di["b"] >= alpha))))
