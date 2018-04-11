@@ -13,9 +13,7 @@ import os
 import argparse
 import imageio
 
-NUMBER = 500
-
-
+NUMBER = 500 
 
 # Coefficients of the attachment phase
 ALPHA = 0.6
@@ -407,6 +405,7 @@ def savestates(plate, filename, n, newpath, number=NUMBER):
     :param filename: (str) Name of the file.
     :param n: (int) The n-th iteration of the snowflake.
         0 by default, if the param doesn't change you will only get the last image.
+    :param newpath: (str) the path of the folder where the pictures are saved
     :param number: (int) [DEFAULT:NUMBER] the total number of iterations
     """
     pixels_snowflake = []
@@ -471,7 +470,10 @@ def create_gif(path):
             writer.append_data(image)
   
   
-def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, sigma=SIGMA, frequency=FREQUENCY):
+def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1,
+                    alpha=ALPHA, beta=BETA, theta=THETA,
+                    mu=MU, gamma=GAMMA, kappa=KAPPA,
+                    sigma=SIGMA, frequency=FREQUENCY):
     """
     Displays a snowflake.
     This is the main function of the program, it will actualise the snowflake as well as displaying it and will eventually save its state
@@ -488,16 +490,21 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
         the cell will be part of the cristal if it is surrrounded by 3 cristal cells.
     :param mu: (float) [DEFAULT: MU] proportion of water that transforms into steam 
     :param gamma: (float) [DEFAULT: GAMMA] proportion of ice that transforms into steam
-    :param k: (float) [DEFAULT: KAPPA] The fraction used fo the evolution of the snowflake.
+    :param kappa: (float) [DEFAULT: KAPPA] The fraction used fo the evolution of the snowflake.
+    :param sigma: (float) [DEFAULT: SIGMA] The coefficient used for the interferences
+    :param frequency: (int) [DEFAULT: FREQUENCY] The frequency at which the program saves the state of the snowflake
     :return: None
     """
     plate = create_plate(initial_position = init_pos)
     
     newpath = "./a{alpha}_b{beta}_t{theta}_m{mu}_g{gamma}_k{kappa}_r{rho}_approx{approx}/".format(beta=BETA, alpha=ALPHA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, rho=RHO, approx=APPROXIMATION)
-    print(newpath)
+    #print(newpath) # DEBUG
+    # Creates directories if they do not exist
     if not os.path.exists(newpath):
         os.makedirs(newpath)
+    if not os.path.exists(newpath + "/pixel"):
         os.makedirs(newpath + "/pixel")
+    if not os.path.exists(newpath + "/hexa"):
         os.makedirs(newpath + "/hexa")
 
     if init_pos == -1: # Initialises the `cells_at_border` set
@@ -564,9 +571,10 @@ for i in range(DIMENSION[0]):
     for j in range(DIMENSION[1]):
         NEIGHBOURS[(i,j)] = get_neighbours((i,j))
 
-model_snowflake()
-
 if __name__ == '__main__':
+    model_snowflake() # Runs the simulation
+    
+    # SETUP FOR THE DOCTEST
     ALPHA = 0.7
     BETA = 0.6
     THETA = 0.7
