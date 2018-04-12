@@ -345,7 +345,7 @@ def interference(plate, sigma=SIGMA):
     :param sigma: (float) [DEFAULT:SIGMA] the coefficient which determines the amplitude of the randomness
     :return: None
     
-    UC: sigma << 1
+    UC: 0 <= sigma << 1
     """
     for (y,x) in NEIGHBOURS:
         cell = plate[y][x]
@@ -465,7 +465,6 @@ def create_gif(path):
     
     with imageio.get_writer(path + "legif.gif", mode='I', fps=25) as writer:
         for filename in list_pictures:
-            print(newpath + filename)
             image = imageio.imread(newpath + filename)
             writer.append_data(image)
   
@@ -495,7 +494,9 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1,
     :param frequency: (int) [DEFAULT: FREQUENCY] The frequency at which the program saves the state of the snowflake
     :return: None
     """
+    print("Creating plate...")
     plate = create_plate(initial_position = init_pos)
+    print("Plate successfully created !")
     
     newpath = "./a{alpha}_b{beta}_t{theta}_m{mu}_g{gamma}_k{kappa}_r{rho}_approx{approx}/".format(beta=BETA, alpha=ALPHA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, rho=RHO, approx=APPROXIMATION)
     #print(newpath) # DEBUG
@@ -512,6 +513,7 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1,
     cells_at_border = set(NEIGHBOURS[(init_pos[0], init_pos[1])]) # set of tuples of coordinates
     max_point = 0
     # Runs the simulation `number` times
+    print("Running simulation...")
     for i in range(number):
         #DIFFUSION
         plate = diffusion(plate, init_pos, max_point, approximation=APPROXIMATION)
@@ -558,9 +560,10 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1,
             savestates(plate, "snowflake", i, newpath)
             print(i, max_point)
     savestates(plate, "snowflake", i, newpath)
-    
+    print("Simulation done !")
+    print("Creating gif...")
     create_gif(newpath) # Creates a gif from all the pictures saved from the plate
-    
+    print("Gif successfully created !")
     return
 
 
