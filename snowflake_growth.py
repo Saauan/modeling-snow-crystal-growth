@@ -494,8 +494,6 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1,
     
     newpath = "./a-{alpha} b-{beta} t-{theta} m-{mu} g-{gamma} k-{kappa} r-{rho} approx-{approx}/".format(beta=BETA, alpha=ALPHA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, rho=RHO, approx=APPROXIMATION)
     print(newpath)
-    print("\n    Frames    |   Distance")
-    print("- - - - - - - - - - - - - - -")
     
     # Creates directories if they do not exist    
     if not os.path.exists(newpath):
@@ -514,6 +512,8 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1,
     
     # Runs the simulation `number` times
     print("Running simulation...")
+    print("\n    Frames    |   Distance")
+    print("- - - - - - - - - - - - - - -")
     for i in range(number):
         #DIFFUSION
         plate = diffusion(plate, init_pos, max_point, approximation=APPROXIMATION)
