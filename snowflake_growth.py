@@ -13,26 +13,24 @@ import os
 import argparse
 import imageio
 
-NUMBER = 1000
-
-
+NUMBER = 500 
 
 # Coefficients of the attachment phase
 ALPHA = 0.6
 BETA = 0.6
-THETA = 0.7
+THETA = 0.6
 # Coefficients of the melting phase
 GAMMA = 0.5 # Proportion of ice that transforms into steam
 MU = 0.5 # Proportion of water that transforms into steam
 
 KAPPA = 0.6 # Proportion of steam which transforms into ice for a border cell at the freezing phase
-RHO = 1 # Density of steam in each cell at the begining of the simulation
+RHO = 1.1 # Density of steam in each cell at the begining of the simulation
 
 # 30 : No loss on 400*400
 # 20 : Little loss on the branches on 400*400
 APPROXIMATION = 40
 SIGMA = 0.000 # Coefficient for the interference
-DIMENSION = [800,800] # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
+DIMENSION = [300,300] # The dimension of the plate (number of rows and columns) (Odd numbers are prefered, because then, there is only one middle cell)
 FREQUENCY = 20 # The frequency at which the program saves the state
 
 DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
@@ -46,17 +44,14 @@ DEFAULT_CELL = {"is_in_crystal":False, "b":0, "c":0, "d":RHO}
 
 parser = argparse.ArgumentParser(description='Allow the user to generate a snowflake.',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-parser.add_argument('-a', '--alpha', type=float,
+parser.add_argument('-a', '-alpha', type=float,
                     help='The Alpha value, 1st value of the attachment phase.', default=ALPHA)
 
-parser.add_argument('-b', '--beta', type=float,
+parser.add_argument('-b', '-beta', type=float,
                     help='The Beta value, 2nd value of the attachment phase.', default=BETA)
 
 parser.add_argument('-t','-theta', type=float,
                     help='The Theta value, 3rd value of the attachment phase.', default=THETA)
-
-parser.add_argument('-n','-number', type=int,
-                    help='The Number of iterations.', default=NUMBER)
 
 parser.add_argument('-g','-gamma', type=float,
                     help='The Gamma value, 1st coefficient of the melting phase, corresponds to the ice transformed into steam.', default=GAMMA)
@@ -70,11 +65,14 @@ parser.add_argument('-k','-kappa', type=float,
 parser.add_argument('-r', '-rho', type=float,
                     help='The Rho value, corresponds to the density of steam in each cell at the beginning of the simulation.', default=RHO)
 
-parser.add_argument('-app', '-approximation', type=int,
-                    help='The Approximation value, the range which represents the distance from the initial cell where the calculous are made.', default=APPROXIMATION)
-
 parser.add_argument('-s', '-sigma', type=float,
                     help='The Sigma value, corresponds to the interference.', default=SIGMA)
+
+parser.add_argument('-app', '-approximation', type=int,
+                    help='The Approximation value, the range which represents the distance from the initial cell where the calculous are made. (Below 20 is deprecated)', default=APPROXIMATION)
+
+parser.add_argument('-n','-number', type=int,
+                    help='The Number of iterations.', default=NUMBER)
 
 parser.add_argument('-d', '-dimension', type=int,
                     help='The Dimension value, corresponds to the size of your screen for the creation of the snowflake.', default=DIMENSION[0])
@@ -85,9 +83,9 @@ parser.add_argument('-f', '-frequency', type=int,
 parameter = vars(parser.parse_args())
 print(parameter)
 
-ALPHA = parameter['alpha']
+ALPHA = parameter['a']
 APPROXIMATION = parameter['app']
-BETA = parameter['beta']
+BETA = parameter['b']
 DIMENSION = (parameter['d'],parameter['d'])
 FREQUENCY = parameter['f']
 GAMMA = parameter['g']
@@ -177,15 +175,10 @@ def get_neighbours(coordinates, dim=DIMENSION):
     >>> get_neighbours((2,2), (5,5))
     [(2, 1), (1, 1), (1, 2), (2, 3), (3, 2), (3, 1)]
     """
-    list_neighbours = generate_neighbours(coordinates)
-    
     # Test if the coordinates are correct, if they are not correct, it removes them from the list
-    for neighbour in list(list_neighbours): 
-        for i in range(2):
-            if neighbour[i] < 0 or neighbour[i] > dim[i]-1:
-                list_neighbours.pop(list_neighbours.index(neighbour))
-                break
+    list_neighbours = [x for x in generate_neighbours(coordinates) if all(i >= 0 for i in x) and all(i < dim[j] for i in x for j in range(2))]
     return list_neighbours
+
 
 # Dynamics functions
 def diffusion_cell(y, x, cell, changes_to_make, plate_in):
@@ -209,7 +202,6 @@ def diffusion_cell(y, x, cell, changes_to_make, plate_in):
     True
     """
     if cell["is_in_crystal"] == False:
-        assert cell["is_in_crystal"] == False, "a cell was in a crystal" # One must check beforehand the cell is not in the crystal
         neighbours = NEIGHBOURS[(y, x)]
         steam = cell["d"]
         for (y2,x2) in neighbours:
@@ -297,15 +289,14 @@ def attachment(di, cell_at_border, neighbours, ind, alpha=ALPHA, beta=BETA, thet
         the cell will be part of the cristal if it is surrrounded by 3 cristal cells.
     :return: (dict) the dictionnary is either the updated cell, either None if the cell was not updated.
     """
-    x = cell_at_border[1]
-    y = cell_at_border[0]
-
+    x, y = cell_at_border[1], cell_at_border[0]
+    
     cristal_neighbours = 0
     test_with_theta = 0
     for neigh_coord, neigh_di in neighbours.items():
         if neigh_di["is_in_crystal"] == True:
             cristal_neighbours += 1     
-            test_with_theta += neigh_di["d"]
+        test_with_theta += neigh_di["d"]
             
     if (((cristal_neighbours in (1, 2)) and (di["b"] > beta))
         or ((cristal_neighbours == 3) and ((di["b"] >= 1) or ((test_with_theta < theta) and (di["b"] >= alpha))))
@@ -348,7 +339,7 @@ def interference(plate, sigma=SIGMA):
     :param sigma: (float) [DEFAULT:SIGMA] the coefficient which determines the amplitude of the randomness
     :return: None
     
-    UC: sigma << 1
+    UC: 0 <= sigma << 1
     """
     for (y,x) in NEIGHBOURS:
         cell = plate[y][x]
@@ -408,6 +399,7 @@ def savestates(plate, filename, n, newpath, number=NUMBER):
     :param filename: (str) Name of the file.
     :param n: (int) The n-th iteration of the snowflake.
         0 by default, if the param doesn't change you will only get the last image.
+    :param newpath: (str) the path of the folder where the pictures are saved
     :param number: (int) [DEFAULT:NUMBER] the total number of iterations
     """
     pixels_snowflake = []
@@ -467,12 +459,14 @@ def create_gif(path):
     
     with imageio.get_writer(path + "legif.gif", mode='I', fps=25) as writer:
         for filename in list_pictures:
-            print(newpath + filename)
             image = imageio.imread(newpath + filename)
             writer.append_data(image)
   
   
-def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta=BETA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, sigma=SIGMA, frequency=FREQUENCY):
+def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1,
+                    alpha=ALPHA, beta=BETA, theta=THETA,
+                    mu=MU, gamma=GAMMA, kappa=KAPPA,
+                    sigma=SIGMA, frequency=FREQUENCY):
     """
     Displays a snowflake.
     This is the main function of the program, it will actualise the snowflake as well as displaying it and will eventually save its state
@@ -489,27 +483,37 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
         the cell will be part of the cristal if it is surrrounded by 3 cristal cells.
     :param mu: (float) [DEFAULT: MU] proportion of water that transforms into steam 
     :param gamma: (float) [DEFAULT: GAMMA] proportion of ice that transforms into steam
-    :param k: (float) [DEFAULT: KAPPA] The fraction used fo the evolution of the snowflake.
+    :param kappa: (float) [DEFAULT: KAPPA] The fraction used fo the evolution of the snowflake.
+    :param sigma: (float) [DEFAULT: SIGMA] The coefficient used for the interferences
+    :param frequency: (int) [DEFAULT: FREQUENCY] The frequency at which the program saves the state of the snowflake
     :return: None
     """
+    print("Creating plate...")
     plate = create_plate(initial_position = init_pos)
+    print("Plate successfully created !")
     
-    newpath = "./a,{alpha} - b,{beta} - t,{theta} - m,{mu} - g,{gamma} - k,{kappa} - r,{rho} - approx,{approx}/".format(beta=BETA, alpha=ALPHA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, rho=RHO, approx=APPROXIMATION)
+    newpath = "./a-{alpha} b-{beta} t-{theta} m-{mu} g-{gamma} k-{kappa} r-{rho} approx-{approx}/".format(beta=BETA, alpha=ALPHA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, rho=RHO, approx=APPROXIMATION)
     print(newpath)
     print("\n    Frames    |   Distance")
     print("- - - - - - - - - - - - - - -")
     
+    # Creates directories if they do not exist    
     if not os.path.exists(newpath):
         os.makedirs(newpath)
+    if not os.path.exists(newpath + "/pixel"):      
         os.makedirs(newpath + "/Pixels")
+    if not os.path.exists(newpath + "/hexa"):
         os.makedirs(newpath + "/Hexagons")
+
 
     if init_pos == -1: # Initialises the `cells_at_border` set
         init_pos = (dim[0]//2, dim[1]//2)
     cells_at_border = set(NEIGHBOURS[(init_pos[0], init_pos[1])]) # set of tuples of coordinates
     max_point = 0
-    # Runs the simulation `number` times
     len_total = len(str(number))
+    
+    # Runs the simulation `number` times
+    print("Running simulation...")
     for i in range(number):
         #DIFFUSION
         plate = diffusion(plate, init_pos, max_point, approximation=APPROXIMATION)
@@ -556,9 +560,10 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
             savestates(plate, "snowflake", i, newpath)
             print("{frames:{longueur}d} / {total} |   {distance}".format(longueur = len_total + 2, frames=i, total=number, distance=max_point))
     savestates(plate, "snowflake", i, newpath)
-    
+    print("Simulation done !")
+    print("Creating gif...")
     create_gif(newpath) # Creates a gif from all the pictures saved from the plate
-    
+    print("Gif successfully created !")
     return
 
 
@@ -569,9 +574,10 @@ for i in range(DIMENSION[0]):
     for j in range(DIMENSION[1]):
         NEIGHBOURS[(i,j)] = get_neighbours((i,j))
 
-model_snowflake()
-
 if __name__ == '__main__':
+    model_snowflake() # Runs the simulation
+    
+    # SETUP FOR THE DOCTEST
     ALPHA = 0.7
     BETA = 0.6
     THETA = 0.7
