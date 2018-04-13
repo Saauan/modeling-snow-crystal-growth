@@ -415,7 +415,7 @@ def savestates(plate, filename, n, newpath, number=NUMBER):
                 pixels_snowflake.append((0,255,(int(d["i"]/NUMBER*255))))
     snowflake = Image.new("RGB", DIMENSION, color=0)
     snowflake.putdata(pixels_snowflake)
-    snowflake.save(newpath + "pixel/" + filename + index_number + ".png", format="PNG")
+    snowflake.save(newpath + "Pixels/" + filename + index_number + ".png", format="PNG")
     
     
     # Creating the Hexagon Image
@@ -443,7 +443,7 @@ def savestates(plate, filename, n, newpath, number=NUMBER):
                 ImageDraw.Draw(snowflake).polygon(xy=shape, fill=(0,0,255 - int((d["d"] / RHO)*255)), outline=(0,0,255 - int((d["d"] / RHO)*255)), )
             else:
                 ImageDraw.Draw(snowflake).polygon(xy=shape, fill=(0,255,(int(d["i"]/NUMBER*255))), outline=(0,255,(int(d["i"]/NUMBER*255))))
-    snowflake.save(newpath + "hexa/" + filename + index_number + ".jpeg", format="JPEG")
+    snowflake.save(newpath + "Hexagons/" + filename + index_number + ".jpeg", format="JPEG")
     return
   
 def create_gif(path):
@@ -453,7 +453,7 @@ def create_gif(path):
     :param path: (str) the path of the folder in which the pictures are saved
     :return: None
     """
-    newpath = path + "pixel/"
+    newpath = path + "Pixels/"
     list_pictures = [f for f in os.listdir(newpath) if (os.path.isfile(os.path.join(newpath, f)) and ("jpeg" in f or "png" in f))]
     list_pictures.sort()
     
@@ -492,20 +492,26 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1,
     plate = create_plate(initial_position = init_pos)
     print("Plate successfully created !")
     
-    newpath = "./a{alpha}_b{beta}_t{theta}_m{mu}_g{gamma}_k{kappa}_r{rho}_approx{approx}/".format(beta=BETA, alpha=ALPHA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, rho=RHO, approx=APPROXIMATION)
-    #print(newpath) # DEBUG
-    # Creates directories if they do not exist
+    newpath = "./a-{alpha} b-{beta} t-{theta} m-{mu} g-{gamma} k-{kappa} r-{rho} approx-{approx}/".format(beta=BETA, alpha=ALPHA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, rho=RHO, approx=APPROXIMATION)
+    print(newpath)
+    print("\n    Frames    |   Distance")
+    print("- - - - - - - - - - - - - - -")
+    
+    # Creates directories if they do not exist    
     if not os.path.exists(newpath):
         os.makedirs(newpath)
-    if not os.path.exists(newpath + "/pixel"):
-        os.makedirs(newpath + "/pixel")
+    if not os.path.exists(newpath + "/pixel"):      
+        os.makedirs(newpath + "/Pixels")
     if not os.path.exists(newpath + "/hexa"):
-        os.makedirs(newpath + "/hexa")
+        os.makedirs(newpath + "/Hexagons")
+
 
     if init_pos == -1: # Initialises the `cells_at_border` set
         init_pos = (dim[0]//2, dim[1]//2)
     cells_at_border = set(NEIGHBOURS[(init_pos[0], init_pos[1])]) # set of tuples of coordinates
     max_point = 0
+    len_total = len(str(number))
+    
     # Runs the simulation `number` times
     print("Running simulation...")
     for i in range(number):
@@ -552,7 +558,7 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1,
         # Saves the state of the plate
         if i % frequency == 0:
             savestates(plate, "snowflake", i, newpath)
-            print(i, max_point)
+            print("{frames:{longueur}d} / {total} |   {distance}".format(longueur = len_total + 2, frames=i, total=number, distance=max_point))
     savestates(plate, "snowflake", i, newpath)
     print("Simulation done !")
     print("Creating gif...")
