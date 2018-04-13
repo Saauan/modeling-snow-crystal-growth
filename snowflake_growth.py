@@ -496,8 +496,8 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
     
     newpath = "./a,{alpha} - b,{beta} - t,{theta} - m,{mu} - g,{gamma} - k,{kappa} - r,{rho} - approx,{approx}/".format(beta=BETA, alpha=ALPHA, theta=THETA, mu=MU, gamma=GAMMA, kappa=KAPPA, rho=RHO, approx=APPROXIMATION)
     print(newpath)
-    print("\n    Frames  | Distance")
-    print("- - - - - - - - - - - -")
+    print("\n    Frames    |   Distance")
+    print("- - - - - - - - - - - - - - -")
     
     if not os.path.exists(newpath):
         os.makedirs(newpath)
@@ -554,7 +554,7 @@ def model_snowflake(number=NUMBER, dim=DIMENSION, init_pos=-1, alpha=ALPHA, beta
         # Saves the state of the plate
         if i % frequency == 0:
             savestates(plate, "snowflake", i, newpath)
-            print("{frames:{longueur}d} / {total} |   {distance}".format(longueur = len_total, frames=i, total=number, distance=max_point))
+            print("{frames:{longueur}d} / {total} |   {distance}".format(longueur = len_total + 2, frames=i, total=number, distance=max_point))
     savestates(plate, "snowflake", i, newpath)
     
     create_gif(newpath) # Creates a gif from all the pictures saved from the plate
