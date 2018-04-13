@@ -17,7 +17,7 @@ NUMBER = 500
 
 # Coefficients of the attachment phase
 ALPHA = 0.6
-BETA = 0.5
+BETA = 0.6
 THETA = 0.6
 # Coefficients of the melting phase
 GAMMA = 0.5 # Proportion of ice that transforms into steam
@@ -175,15 +175,10 @@ def get_neighbours(coordinates, dim=DIMENSION):
     >>> get_neighbours((2,2), (5,5))
     [(2, 1), (1, 1), (1, 2), (2, 3), (3, 2), (3, 1)]
     """
-    list_neighbours = generate_neighbours(coordinates)
-    
     # Test if the coordinates are correct, if they are not correct, it removes them from the list
-    for neighbour in list(list_neighbours): 
-        for i in range(2):
-            if neighbour[i] < 0 or neighbour[i] > dim[i]-1:
-                list_neighbours.pop(list_neighbours.index(neighbour))
-                break
+    list_neighbours = [x for x in generate_neighbours(coordinates) if all(i >= 0 for i in x) and all(i < dim[j] for i in x for j in range(2))]
     return list_neighbours
+
 
 # Dynamics functions
 def diffusion_cell(y, x, cell, changes_to_make, plate_in):
@@ -294,9 +289,8 @@ def attachment(di, cell_at_border, neighbours, ind, alpha=ALPHA, beta=BETA, thet
         the cell will be part of the cristal if it is surrrounded by 3 cristal cells.
     :return: (dict) the dictionnary is either the updated cell, either None if the cell was not updated.
     """
-    x = cell_at_border[1]
-    y = cell_at_border[0]
-
+    x, y = cell_at_border[1], cell_at_border[0]
+    
     cristal_neighbours = 0
     test_with_theta = 0
     for neigh_coord, neigh_di in neighbours.items():
